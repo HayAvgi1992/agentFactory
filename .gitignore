@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Python (backend also has backend/.gitignore)
+__pycache__/
+*.pyc
+venv/
+
+# Local data / databases
+*.db
+chroma_data/
+
+# Node / Next.js (frontend also has frontend/.gitignore)
+node_modules/
+.next/
