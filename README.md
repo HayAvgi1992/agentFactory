@@ -1,21 +1,26 @@
 # GTM Agent Factory
 
-> Phase 1 MVP — AI SDR workflow that automates lead qualification, outreach, and recommendation.
+> Phase 3 — AI SDR workflow with SQLite persistence and GTM evaluation metrics.
 
 Inspired by monday.com RevAI. The goal is **not** another chatbot — it's an AI system that solves a GTM business problem with measurable agent outputs.
 
 ---
 
-## Phase 1 MVP (Current)
+## Phase 3 Evaluation (Current)
 
-**Goal:** Build a complete workflow as quickly as possible. Keep it simple.
+**Goal:** Measure business impact from persisted agent runs.
+
+**KPIs:**
+- Total Leads
+- Qualified Leads / Qualification Rate
+- Average Lead Score
+- Meeting Recommendation Rate
 
 **Not included yet** (future phases):
-- LangGraph (Phase 5)
-- Vector DB / Embeddings / RAG (Phase 7)
-- SQLite persistence (Phase 2)
 - A/B prompt testing (Phase 4)
+- LangGraph (Phase 5)
 - Tool calling (Phase 6)
+- Vector DB / Embeddings / RAG (Phase 7)
 
 ---
 
@@ -29,6 +34,8 @@ Qualification Agent  →  score 0-100, qualified/not, reason
 Outreach Agent       →  email, LinkedIn, discovery questions
     ↓
 Recommendation Agent →  book_meeting | send_email | nurture | reject
+    ↓
+GTM Metrics          →  qualification rate, avg score, meeting rate
     ↓
 MVP Dashboard        →  Lead, Score, Qualification, Recommendation
 ```
@@ -96,9 +103,9 @@ Visual workflow card showing the 4-step agent flow, with live status (Pending �
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js, TypeScript, React |
-| Backend | Python, FastAPI, Pydantic |
+| Backend | Python, FastAPI, Pydantic, SQLAlchemy |
+| Database | SQLite |
 | AI | OpenAI API (structured JSON outputs) |
-| Storage | In-memory (Phase 1 only) |
 
 ---
 
@@ -141,18 +148,21 @@ gtm-agent-factory/
 │   ├── app/
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── pipeline.py          # Simple sequential orchestration
-│   │   ├── store.py             # In-memory lead store
+│   │   ├── evaluation.py        # GTM KPI aggregation
+│   │   ├── repository.py        # SQLite persistence
 │   │   ├── schemas.py           # Pydantic models
 │   │   ├── config.py
+│   │   ├── db/                  # SQLAlchemy models + session
 │   │   └── agents/
 │   │       ├── qualification_agent.py
 │   │       ├── outreach_agent.py
 │   │       └── recommendation_agent.py
 │   └── requirements.txt
 └── frontend/
-    ├── app/page.tsx             # MVP dashboard
+    ├── app/page.tsx             # MVP dashboard + GTM metrics
     └── components/
         ├── LeadForm.tsx
+        ├── EvaluationMetrics.tsx
         └── LeadPipeline.tsx
 ```
 
@@ -163,6 +173,8 @@ gtm-agent-factory/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check |
+| GET | `/api/evaluation/metrics` | GTM KPIs (qualification rate, avg score, meeting rate) |
+| GET | `/api/leads/summary` | Lead count summary |
 | POST | `/api/leads/submit` | Submit lead + run agents |
 | GET | `/api/leads` | List all leads |
 | GET | `/api/leads/{id}` | Get lead details |
@@ -179,10 +191,10 @@ Without `OPENAI_API_KEY`, agents return deterministic mock responses based on me
 
 | Phase | Feature | Status |
 |-------|---------|--------|
-| 1 | MVP workflow | ✅ Current |
-| 2 | SQLite persistence + agent_runs | 🔜 Next |
-| 3 | Evaluation KPIs dashboard | 🔜 |
-| 4 | A/B prompt testing | 🔜 |
+| 1 | MVP workflow | ✅ |
+| 2 | SQLite persistence + agent_runs | ✅ |
+| 3 | Evaluation KPIs dashboard | ✅ Current |
+| 4 | A/B prompt testing | 🔜 Next |
 | 5 | LangGraph orchestration | 🔜 |
 | 6 | Tool calling (company lookup) | 🔜 |
 | 7 | RAG (product docs) | 🔜 |

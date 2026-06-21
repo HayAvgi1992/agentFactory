@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/Card";
+import { EvaluationMetricsPanel } from "@/components/EvaluationMetrics";
 import { LeadForm } from "@/components/LeadForm";
 import { LeadPipeline } from "@/components/LeadPipeline";
 import { PipelineDiagram } from "@/components/PipelineDiagram";
 import { api } from "@/lib/api";
-import type { Lead } from "@/lib/api";
+import type { EvaluationMetrics, Lead } from "@/lib/api";
 import { ACTION_LABELS } from "@/lib/utils";
 
 export default function HomePage() {
@@ -15,10 +16,19 @@ export default function HomePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [failedStep, setFailedStep] = useState<number | null>(null);
 
+  const [persistedCount, setPersistedCount] = useState<number | null>(null);
+  const [metrics, setMetrics] = useState<EvaluationMetrics | null>(null);
+
   const refresh = useCallback(async () => {
     try {
-      const leadsData = await api.getLeads();
+      const [leadsData, summary, metricsData] = await Promise.all([
+        api.getLeads(),
+        api.getLeadsSummary(),
+        api.getEvaluationMetrics(),
+      ]);
       setLeads(leadsData);
+      setPersistedCount(summary.total_leads);
+      setMetrics(metricsData);
       if (leadsData.length > 0 && !selectedLead) {
         setSelectedLead(leadsData[0]);
       }
@@ -43,6 +53,7 @@ export default function HomePage() {
     setFailedStep(null);
     setLeads((prev) => [lead, ...prev]);
     setSelectedLead(lead);
+    refresh();
   };
 
   return (
@@ -66,7 +77,18 @@ export default function HomePage() {
         </Card>
       </div>
 
-      <Card title="MVP Dashboard">
+      <EvaluationMetricsPanel metrics={metrics} />
+
+      <Card
+        title="MVP Dashboard"
+        action={
+          persistedCount !== null ? (
+            <span className="dashboard-persisted" title="Loaded from SQLite on the backend">
+              {persistedCount} stored · survives refresh
+            </span>
+          ) : undefined
+        }
+      >
         {leads.length === 0 ? (
           <p className="empty">No leads yet. Submit one above.</p>
         ) : (

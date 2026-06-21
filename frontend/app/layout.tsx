@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PersistedStatus } from "@/components/PersistedStatus";
 import { Figtree } from "next/font/google";
 import "./globals.css";
 
@@ -9,7 +10,7 @@ const figtree = Figtree({
 
 export const metadata: Metadata = {
   title: "GTM Agent Factory",
-  description: "Phase 1 MVP — AI SDR workflow inspired by monday.com RevAI",
+  description: "Phase 2 — AI SDR workflow with SQLite persistence",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,10 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   GTM Agent Factory
                   <span className="logo-by">by monday</span>
                 </h1>
-                <p>Phase 1 MVP · Qualification → Outreach → Recommendation</p>
+                <p>Phase 2 · SQLite persistence · Qualification → Outreach → Recommendation</p>
               </div>
             </div>
             <nav className="nav-tags">
+              <PersistedStatus />
               <span className="tag tag-red">FastAPI</span>
               <span className="tag tag-yellow">OpenAI</span>
               <span className="tag tag-green">Next.js</span>

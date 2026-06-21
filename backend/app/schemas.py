@@ -44,7 +44,24 @@ class LeadResponse(BaseModel):
     results: Optional[AgentResults] = None
 
 
+class EvaluationMetrics(BaseModel):
+    total_leads: int
+    qualified_leads: int
+    qualification_rate: float
+    meeting_recommendations: int
+    meeting_recommendation_rate: float
+    average_score: Optional[float] = None
+    processed_leads: int
+
+
 class HealthResponse(BaseModel):
     status: str
-    version: str = "1.0.0"
-    phase: str = "1-mvp"
+    version: str = "3.0.0"
+    phase: str = "3-evaluation"
+    persisted: bool = True
+    lead_count: int = 0
+
+
+class LeadsSummaryResponse(BaseModel):
+    total_leads: int
+    persisted: bool = True

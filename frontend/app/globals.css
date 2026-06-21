@@ -222,6 +222,22 @@ body {
   text-align: left;
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-header .card-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 .card-title {
   font-size: 1rem;
   font-weight: 600;
@@ -230,6 +246,48 @@ body {
   border-bottom: 1px solid var(--border);
   text-align: left;
   direction: ltr;
+}
+
+.persisted-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 202, 114, 0.35);
+  background: rgba(0, 202, 114, 0.1);
+  font-size: 0.75rem;
+  color: #009955;
+}
+
+.persisted-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--monday-green);
+  box-shadow: 0 0 0 2px rgba(0, 202, 114, 0.25);
+}
+
+.persisted-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.persisted-count {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.dashboard-persisted {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #009955;
+  background: rgba(0, 202, 114, 0.1);
+  border: 1px solid rgba(0, 202, 114, 0.25);
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .badge {

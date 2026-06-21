@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable, Dict, TypeVar
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, TypeVar
 
 from app.agents.outreach_agent import run_outreach_agent
 from app.agents.qualification_agent import run_qualification_agent
@@ -17,11 +18,31 @@ STEP_IDS = ("input", "qualification", "outreach", "recommendation")
 
 
 class PipelineStepError(Exception):
-    def __init__(self, step_index: int, step_id: str, message: str):
+    def __init__(
+        self,
+        step_index: int,
+        step_id: str,
+        message: str,
+        runs: List[AgentRunRecord] | None = None,
+    ):
         self.step_index = step_index
         self.step_id = step_id
         self.message = message
+        self.runs = runs or []
         super().__init__(message)
+
+
+@dataclass
+class AgentRunRecord:
+    agent_name: str
+    input: Dict[str, Any]
+    output: Dict[str, Any]
+
+
+@dataclass
+class PipelineResult:
+    results: AgentResults
+    runs: List[AgentRunRecord] = field(default_factory=list)
 
 
 def _validate_lead(lead_data: Dict[str, Any]) -> None:
@@ -39,32 +60,64 @@ def _run_step(step_index: int, step_id: str, fn: Callable[[], T]) -> T:
         raise PipelineStepError(step_index, step_id, str(e)) from e
 
 
-def run_pipeline(lead_data: Dict[str, Any]) -> AgentResults:
+def run_pipeline(lead_data: Dict[str, Any]) -> PipelineResult:
     start = time.time()
+    runs: List[AgentRunRecord] = []
 
-    _run_step(0, "input", lambda: _validate_lead(lead_data))
+    try:
+        _run_step(0, "input", lambda: _validate_lead(lead_data))
 
-    qualification = _run_step(
-        1,
-        "qualification",
-        lambda: run_qualification_agent(lead_data),
-    )
+        qualification_input = dict(lead_data)
+        qualification = _run_step(
+            1,
+            "qualification",
+            lambda: run_qualification_agent(lead_data),
+        )
+        runs.append(
+            AgentRunRecord(
+                agent_name="qualification",
+                input=qualification_input,
+                output=dict(qualification),
+            )
+        )
 
-    outreach = _run_step(
-        2,
-        "outreach",
-        lambda: run_outreach_agent(lead_data, qualification),
-    )
+        outreach_input = {"lead_data": lead_data, "qualification": qualification}
+        outreach = _run_step(
+            2,
+            "outreach",
+            lambda: run_outreach_agent(lead_data, qualification),
+        )
+        runs.append(
+            AgentRunRecord(
+                agent_name="outreach",
+                input=outreach_input,
+                output=dict(outreach),
+            )
+        )
 
-    recommendation = _run_step(
-        3,
-        "recommendation",
-        lambda: run_recommendation_agent(lead_data, qualification, outreach),
-    )
+        recommendation_input = {
+            "lead_data": lead_data,
+            "qualification": qualification,
+            "outreach": outreach,
+        }
+        recommendation = _run_step(
+            3,
+            "recommendation",
+            lambda: run_recommendation_agent(lead_data, qualification, outreach),
+        )
+        runs.append(
+            AgentRunRecord(
+                agent_name="recommendation",
+                input=recommendation_input,
+                output=dict(recommendation),
+            )
+        )
+    except PipelineStepError as e:
+        raise PipelineStepError(e.step_index, e.step_id, e.message, runs=runs) from e
 
     elapsed_ms = int((time.time() - start) * 1000)
 
-    return AgentResults(
+    results = AgentResults(
         qualification=QualificationOutput(
             qualified=qualification["qualified"],
             score=qualification["score"],
@@ -80,3 +133,5 @@ def run_pipeline(lead_data: Dict[str, Any]) -> AgentResults:
         ),
         processing_time_ms=elapsed_ms,
     )
+
+    return PipelineResult(results=results, runs=runs)

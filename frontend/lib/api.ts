@@ -33,6 +33,29 @@ export interface Lead {
   results?: AgentResults;
 }
 
+export interface EvaluationMetrics {
+  total_leads: number;
+  qualified_leads: number;
+  qualification_rate: number;
+  meeting_recommendations: number;
+  meeting_recommendation_rate: number;
+  average_score: number | null;
+  processed_leads: number;
+}
+
+export interface HealthResponse {
+  status: string;
+  version: string;
+  phase: string;
+  persisted: boolean;
+  lead_count: number;
+}
+
+export interface LeadsSummary {
+  total_leads: number;
+  persisted: boolean;
+}
+
 export class ApiError extends Error {
   failedStep?: number;
 
@@ -61,6 +84,9 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getHealth: () => fetchApi<HealthResponse>("/health"),
+  getEvaluationMetrics: () => fetchApi<EvaluationMetrics>("/api/evaluation/metrics"),
+  getLeadsSummary: () => fetchApi<LeadsSummary>("/api/leads/summary"),
   getLeads: () => fetchApi<Lead[]>("/api/leads"),
   getLead: (id: number) => fetchApi<Lead>(`/api/leads/${id}`),
   submitLead: (data: Record<string, unknown>) =>

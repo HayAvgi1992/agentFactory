@@ -4,12 +4,16 @@ interface CardProps {
   title: string;
   children: ReactNode;
   className?: string;
+  action?: ReactNode;
 }
 
-export function Card({ title, children, className = "" }: CardProps) {
+export function Card({ title, children, className = "", action }: CardProps) {
   return (
     <div className={`card ${className}`}>
-      <h3 className="card-title">{title}</h3>
+      <div className="card-header">
+        <h3 className="card-title">{title}</h3>
+        {action}
+      </div>
       {children}
     </div>
   );
