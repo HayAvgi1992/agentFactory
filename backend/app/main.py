@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db, init_db
 from app.evaluation import compute_evaluation_metrics
-from app.pipeline import PipelineStepError, run_pipeline
+from app.pipeline import run_pipeline
 from app.repository import (
     count_leads,
     create_lead,
@@ -15,6 +15,7 @@ from app.repository import (
     lead_to_response,
     list_leads,
     save_agent_runs,
+    update_lead_pipeline,
 )
 from app.schemas import (
     EvaluationMetrics,
@@ -94,17 +95,28 @@ def submit_lead(data: LeadCreate, db: Session = Depends(get_db)):
 
     try:
         pipeline_result = run_pipeline(lead_data)
-        save_agent_runs(db, lead.id, pipeline_result.runs)
+
+        if pipeline_result.runs:
+            save_agent_runs(db, lead.id, pipeline_result.runs)
+
+        update_lead_pipeline(
+            db,
+            lead.id,
+            status=pipeline_result.status,
+            error=pipeline_result.error,
+            step_id=pipeline_result.step_id,
+            processing_time_ms=pipeline_result.processing_time_ms,
+        )
         db.commit()
         db.refresh(lead)
-        return lead_to_response(lead, pipeline_results=pipeline_result.results)
-    except PipelineStepError as e:
-        if e.runs:
-            save_agent_runs(db, lead.id, e.runs)
-        db.commit()
-        raise HTTPException(
-            status_code=500,
-            detail={"message": e.message, "failed_step": e.step_index, "step_id": e.step_id},
+
+        return lead_to_response(
+            lead,
+            pipeline_results=pipeline_result.results,
+            pipeline_status=pipeline_result.status,
+            pipeline_error=pipeline_result.error,
+            pipeline_step_id=pipeline_result.step_id,
+            processing_time_ms=pipeline_result.processing_time_ms,
         )
     except Exception as e:
         db.rollback()

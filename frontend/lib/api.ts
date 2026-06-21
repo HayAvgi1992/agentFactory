@@ -67,6 +67,10 @@ export interface Lead {
   company_size?: string;
   message: string;
   created_at: string;
+  pipeline_status: "pending" | "complete" | "partial";
+  pipeline_error?: string | null;
+  pipeline_step_id?: string | null;
+  processing_time_ms?: number | null;
   results?: AgentResults;
 }
 

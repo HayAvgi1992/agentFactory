@@ -1,7 +1,15 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel
+
+PipelineStatus = Literal["pending", "complete", "partial"]
+
+
+class AgentRunRecord(BaseModel):
+    agent_name: str
+    input: Dict[str, Any]
+    output: Dict[str, Any]
 
 
 class LeadCreate(BaseModel):
@@ -78,6 +86,10 @@ class LeadResponse(BaseModel):
     company_size: Optional[str] = None
     message: str
     created_at: datetime
+    pipeline_status: PipelineStatus = "pending"
+    pipeline_error: Optional[str] = None
+    pipeline_step_id: Optional[str] = None
+    processing_time_ms: Optional[int] = None
     results: Optional[AgentResults] = None
 
 

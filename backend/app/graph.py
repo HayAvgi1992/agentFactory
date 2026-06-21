@@ -1,7 +1,8 @@
-"""LangGraph workflow — 7-agent target architecture with shared GTMState."""
+"""LangGraph workflow — sole orchestrator for the 7-agent GTM pipeline."""
 
 from __future__ import annotations
 
+import time
 from typing import Any, Callable, Dict, Tuple
 
 from langgraph.graph import END, StateGraph
@@ -13,16 +14,19 @@ from app.agents.product_fit_agent import run_product_fit_agent
 from app.agents.qualification_agent import run_qualification_agent
 from app.agents.recommendation_agent import run_recommendation_agent
 from app.agents.research_agent import run_research_agent
-from app.state import GTMState
+from app.config import settings
+from app.state import AgentRunDict, GTMState
 
 NodeFn = Callable[[GTMState], Dict[str, Any]]
 
+_COMPILED_GRAPH = None
 
-def planner_node(state: GTMState) -> Dict[str, Any]:
+
+def _planner_impl(state: GTMState) -> Dict[str, Any]:
     return {"planner": run_planner_agent(state)}
 
 
-def research_node(state: GTMState) -> Dict[str, Any]:
+def _research_impl(state: GTMState) -> Dict[str, Any]:
     result = run_research_agent(state)
     return {
         "retrieved_context": result["retrieved_context"],
@@ -30,54 +34,123 @@ def research_node(state: GTMState) -> Dict[str, Any]:
     }
 
 
-def qualification_node(state: GTMState) -> Dict[str, Any]:
+def _qualification_impl(state: GTMState) -> Dict[str, Any]:
     return {"qualification": run_qualification_agent(state)}
 
 
-def product_fit_node(state: GTMState) -> Dict[str, Any]:
+def _product_fit_impl(state: GTMState) -> Dict[str, Any]:
     return {"product_fit": run_product_fit_agent(state)}
 
 
-def outreach_node(state: GTMState) -> Dict[str, Any]:
+def _outreach_impl(state: GTMState) -> Dict[str, Any]:
     return {"outreach": run_outreach_agent(state)}
 
 
-def recommendation_node(state: GTMState) -> Dict[str, Any]:
+def _recommendation_impl(state: GTMState) -> Dict[str, Any]:
     return {"recommendation": run_recommendation_agent(state)}
 
 
-def evaluation_node(state: GTMState) -> Dict[str, Any]:
+def _evaluation_impl(state: GTMState) -> Dict[str, Any]:
     return {"evaluation": run_evaluation_agent(state)}
 
 
-# Ordered steps for sequential execution with per-step error handling.
 AGENT_STEPS: Tuple[Tuple[str, str, NodeFn], ...] = (
-    ("planner", "planner", planner_node),
-    ("research", "research", research_node),
-    ("qualification", "qualification", qualification_node),
-    ("product_fit", "product_fit", product_fit_node),
-    ("outreach", "outreach", outreach_node),
-    ("recommendation", "recommendation", recommendation_node),
-    ("evaluation", "evaluation", evaluation_node),
+    ("planner", "planner", _planner_impl),
+    ("research", "research", _research_impl),
+    ("qualification", "qualification", _qualification_impl),
+    ("product_fit", "product_fit", _product_fit_impl),
+    ("outreach", "outreach", _outreach_impl),
+    ("recommendation", "recommendation", _recommendation_impl),
+    ("evaluation", "evaluation", _evaluation_impl),
 )
+
+_NODE_NAMES = {
+    "planner": "planner_step",
+    "research": "research_step",
+    "qualification": "qualification_step",
+    "product_fit": "product_fit_step",
+    "outreach": "outreach_step",
+    "recommendation": "recommendation_step",
+    "evaluation": "evaluation_step",
+}
+
+
+def _snapshot_for_agent(state: GTMState, agent_name: str) -> Dict[str, Any]:
+    snapshot: Dict[str, Any] = {"lead": state.get("lead", {})}
+    if agent_name != "planner":
+        snapshot["planner"] = state.get("planner")
+    if agent_name not in ("planner", "research"):
+        snapshot["retrieved_context"] = state.get("retrieved_context", [])
+    if agent_name in ("product_fit", "outreach", "recommendation", "evaluation"):
+        snapshot["qualification"] = state.get("qualification")
+    if agent_name in ("outreach", "recommendation", "evaluation"):
+        snapshot["product_fit"] = state.get("product_fit")
+    if agent_name in ("recommendation", "evaluation"):
+        snapshot["outreach"] = state.get("outreach")
+    if agent_name == "evaluation":
+        snapshot["recommendation"] = state.get("recommendation")
+    return snapshot
+
+
+def _agent_output(state: GTMState, agent_name: str) -> Dict[str, Any]:
+    if agent_name == "research":
+        research = state.get("research") or {}
+        return {
+            "retrieved_documents": research.get("retrieved_documents", []),
+            "retrieved_context": state.get("retrieved_context") or [],
+        }
+    return dict(state.get(agent_name) or {})
+
+
+def _instrument_node(
+    step_index: int,
+    step_id: str,
+    agent_name: str,
+    inner: NodeFn,
+) -> Callable[[GTMState], Dict[str, Any]]:
+    """Wrap an agent node with delay, run recording, and error capture."""
+
+    def node(state: GTMState) -> Dict[str, Any]:
+        if state.get("pipeline_error"):
+            return {}
+
+        time.sleep(settings.step_delay_sec)
+        agent_input = _snapshot_for_agent(state, agent_name)
+
+        try:
+            patch = inner(state)
+            merged: GTMState = {**state, **patch}  # type: ignore[typeddict-item]
+            run: AgentRunDict = {
+                "agent_name": agent_name,
+                "input": agent_input,
+                "output": _agent_output(merged, agent_name),
+            }
+            return {**patch, "agent_runs": [run]}
+        except Exception as exc:
+            return {
+                "pipeline_error": {
+                    "step_index": step_index,
+                    "step_id": step_id,
+                    "message": str(exc),
+                },
+            }
+
+    return node
 
 
 def build_graph():
-    """Compile the LangGraph state machine for the full GTM workflow."""
+    """Compile and cache the LangGraph state machine."""
+    global _COMPILED_GRAPH
+    if _COMPILED_GRAPH is not None:
+        return _COMPILED_GRAPH
+
     workflow = StateGraph(GTMState)
-    node_names = {
-        "planner": "planner_step",
-        "research": "research_step",
-        "qualification": "qualification_step",
-        "product_fit": "product_fit_step",
-        "outreach": "outreach_step",
-        "recommendation": "recommendation_step",
-        "evaluation": "evaluation_step",
-    }
-    for step_id, node_name, node_fn in (
-        (step_id, node_names[step_id], node_fn) for step_id, _, node_fn in AGENT_STEPS
-    ):
-        workflow.add_node(node_name, node_fn)
+    for index, (step_id, agent_name, inner) in enumerate(AGENT_STEPS, start=1):
+        node_name = _NODE_NAMES[step_id]
+        workflow.add_node(
+            node_name,
+            _instrument_node(index, step_id, agent_name, inner),
+        )
 
     workflow.set_entry_point("planner_step")
     workflow.add_edge("planner_step", "research_step")
@@ -87,4 +160,6 @@ def build_graph():
     workflow.add_edge("outreach_step", "recommendation_step")
     workflow.add_edge("recommendation_step", "evaluation_step")
     workflow.add_edge("evaluation_step", END)
-    return workflow.compile()
+
+    _COMPILED_GRAPH = workflow.compile()
+    return _COMPILED_GRAPH

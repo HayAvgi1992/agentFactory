@@ -168,7 +168,13 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
         )}
       </div>
 
-      <p className="processing-time">Completed in {results.processing_time_ms}ms</p>
+      <p className="processing-time">
+        Completed in{" "}
+        {lead.processing_time_ms ?? results.processing_time_ms}ms
+        {lead.pipeline_status === "partial" && lead.pipeline_error && (
+          <> · Partial: {lead.pipeline_error}</>
+        )}
+      </p>
     </div>
   );
 }

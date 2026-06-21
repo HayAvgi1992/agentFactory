@@ -5,9 +5,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
 from app.evaluation import compute_evaluation_metrics
-from app.pipeline import AgentRunRecord
 from app.repository import create_lead, save_agent_runs
-from app.schemas import LeadCreate
+from app.schemas import AgentRunRecord, LeadCreate
 
 
 def _make_session():
@@ -26,29 +25,33 @@ def _complete_runs(
     needs_human_review: bool = False,
 ) -> list[AgentRunRecord]:
     return [
-        AgentRunRecord("planner", {}, {"required_sources": ["product_catalog"]}),
-        AgentRunRecord("research", {}, {"retrieved_documents": ["monday_crm"], "retrieved_context": []}),
+        AgentRunRecord(agent_name="planner", input={}, output={"required_sources": ["product_catalog"]}),
         AgentRunRecord(
-            "qualification",
-            {},
-            {"qualified": qualified, "score": score, "reason": "ok"},
+            agent_name="research",
+            input={},
+            output={"retrieved_documents": ["monday_crm"], "retrieved_context": []},
         ),
         AgentRunRecord(
-            "product_fit",
-            {},
-            {
+            agent_name="qualification",
+            input={},
+            output={"qualified": qualified, "score": score, "reason": "ok"},
+        ),
+        AgentRunRecord(
+            agent_name="product_fit",
+            input={},
+            output={
                 "recommended_product": "Monday CRM",
                 "confidence": 0.9,
                 "matching_requirements": [],
                 "reasoning": "fit",
             },
         ),
-        AgentRunRecord("outreach", {}, {"email": "e", "linkedin": "l", "questions": []}),
-        AgentRunRecord("recommendation", {}, {"next_action": next_action}),
+        AgentRunRecord(agent_name="outreach", input={}, output={"email": "e", "linkedin": "l", "questions": []}),
+        AgentRunRecord(agent_name="recommendation", input={}, output={"next_action": next_action}),
         AgentRunRecord(
-            "evaluation",
-            {},
-            {
+            agent_name="evaluation",
+            input={},
+            output={
                 "confidence": confidence,
                 "needs_human_review": needs_human_review,
                 "missing_information": [],

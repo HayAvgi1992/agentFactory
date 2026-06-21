@@ -17,6 +17,10 @@ class Lead(Base):
     industry: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     company_size: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
+    pipeline_status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    pipeline_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pipeline_step_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    processing_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         server_default=func.now(),

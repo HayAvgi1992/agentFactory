@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import Lead
-from app.repository import AGENT_ORDER, LEGACY_AGENT_ORDER
+from app.results_builder import AGENT_ORDER, LEGACY_AGENT_ORDER
 from app.schemas import EvaluationMetrics
 
 

@@ -11,6 +11,23 @@ interface LeadFormProps {
   onPipelineFailure?: (failedStep: number) => void;
 }
 
+const STEP_IDS = [
+  "input",
+  "planner",
+  "research",
+  "qualification",
+  "product_fit",
+  "outreach",
+  "recommendation",
+  "evaluation",
+];
+
+function stepIndexFromId(stepId?: string | null): number {
+  if (!stepId) return 0;
+  const index = STEP_IDS.indexOf(stepId);
+  return index >= 0 ? index : 0;
+}
+
 const SAMPLE_LEADS = [
   {
     company_name: "Acme",
@@ -61,8 +78,16 @@ export function LeadForm({
         company_size: form.company_size || null,
         message: form.message,
       });
+
+      if (lead.pipeline_status === "partial") {
+        onPipelineFailure?.(stepIndexFromId(lead.pipeline_step_id));
+        setError(lead.pipeline_error || "Pipeline stopped before completion.");
+      }
+
       onSubmitted(lead);
-      setForm({ company_name: "", industry: "", company_size: "", message: "" });
+      if (lead.pipeline_status === "complete") {
+        setForm({ company_name: "", industry: "", company_size: "", message: "" });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.failedStep !== undefined) {
         onPipelineFailure?.(err.failedStep);

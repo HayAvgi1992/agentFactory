@@ -121,6 +121,9 @@ export default function HomePage() {
                         {lead.industry && (
                           <span className="cell-sub">{lead.industry}</span>
                         )}
+                        {lead.pipeline_status === "partial" && (
+                          <span className="cell-sub partial-badge">Partial</span>
+                        )}
                       </td>
                       <td>{r ? `${r.qualification.score}/100` : "—"}</td>
                       <td>{r?.product_fit?.recommended_product ?? "—"}</td>

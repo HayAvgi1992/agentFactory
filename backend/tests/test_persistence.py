@@ -5,15 +5,9 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
 from app.db.models import AgentRun, Lead
-from app.pipeline import AgentRunRecord
-from app.repository import (
-    _build_agent_results,
-    create_lead,
-    get_lead,
-    list_leads,
-    save_agent_runs,
-)
-from app.schemas import LeadCreate
+from app.repository import create_lead, get_lead, list_leads, save_agent_runs
+from app.results_builder import build_agent_results_from_runs
+from app.schemas import AgentRunRecord, LeadCreate
 
 
 def _make_session():
@@ -143,7 +137,7 @@ def test_partial_runs_return_no_results():
             output={"qualified": True, "score": 80, "reason": "ok"},
         ),
     ]
-    assert _build_agent_results(runs) is None
+    assert build_agent_results_from_runs(runs) is None
 
 
 def test_legacy_three_agent_runs_still_load():
@@ -167,7 +161,7 @@ def test_legacy_three_agent_runs_still_load():
             output={"next_action": "send_email"},
         ),
     ]
-    results = _build_agent_results(runs)
+    results = build_agent_results_from_runs(runs)
     assert results is not None
     assert results.qualification.score == 80
     assert results.product_fit is None
