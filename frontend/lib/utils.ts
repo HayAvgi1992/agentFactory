@@ -17,6 +17,7 @@ export const ACTION_LABELS: Record<
   send_email: { label: "Send Email", color: MONDAY.red },
   nurture: { label: "Nurture", color: MONDAY.yellow, textColor: MONDAY.text },
   reject: { label: "Reject", color: MONDAY.red },
+  human_review: { label: "Human Review", color: MONDAY.yellow, textColor: MONDAY.text },
 };
 
 export function formatDate(iso: string): string {

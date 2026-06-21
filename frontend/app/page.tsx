@@ -98,8 +98,10 @@ export default function HomePage() {
                 <tr>
                   <th>Lead</th>
                   <th>Score</th>
+                  <th>Product</th>
                   <th>Qualification</th>
                   <th>Recommendation</th>
+                  <th>Confidence</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,6 +123,7 @@ export default function HomePage() {
                         )}
                       </td>
                       <td>{r ? `${r.qualification.score}/100` : "—"}</td>
+                      <td>{r?.product_fit?.recommended_product ?? "—"}</td>
                       <td>
                         {r ? (
                           <span
@@ -148,6 +151,11 @@ export default function HomePage() {
                         ) : (
                           "—"
                         )}
+                      </td>
+                      <td>
+                        {r?.evaluation
+                          ? `${Math.round(r.evaluation.confidence * 100)}%`
+                          : "—"}
                       </td>
                     </tr>
                   );

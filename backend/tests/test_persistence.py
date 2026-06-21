@@ -1,4 +1,4 @@
-"""Persistence tests for Phase 2."""
+"""Persistence tests for Phase 2+."""
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -23,6 +23,77 @@ def _make_session():
     return Session()
 
 
+def _full_runs(
+    qualified: bool = True,
+    score: int = 88,
+    next_action: str = "book_meeting",
+) -> list[AgentRunRecord]:
+    return [
+        AgentRunRecord(
+            agent_name="planner",
+            input={"lead": {"company_name": "Acme"}},
+            output={"required_sources": ["crm_accounts", "product_catalog"]},
+        ),
+        AgentRunRecord(
+            agent_name="research",
+            input={"lead": {"company_name": "Acme"}, "planner": {}},
+            output={
+                "retrieved_documents": ["acme", "monday_crm"],
+                "retrieved_context": [
+                    {
+                        "source": "crm_accounts",
+                        "document_id": "acme",
+                        "title": "Acme",
+                        "snippet": "CRM account notes",
+                    }
+                ],
+            },
+        ),
+        AgentRunRecord(
+            agent_name="qualification",
+            input={},
+            output={
+                "qualified": qualified,
+                "score": score,
+                "reason": "Strong fit",
+                "signals": ["ICP fit"],
+                "risks": [],
+                "reasoning": "Strong fit",
+            },
+        ),
+        AgentRunRecord(
+            agent_name="product_fit",
+            input={},
+            output={
+                "recommended_product": "Monday CRM",
+                "alternative_products": ["Work Management"],
+                "confidence": 0.91,
+                "matching_requirements": ["Pipeline visibility"],
+                "reasoning": "CRM fit",
+            },
+        ),
+        AgentRunRecord(
+            agent_name="outreach",
+            input={},
+            output={"email": "Hi", "linkedin": "Hello", "questions": ["Q1"]},
+        ),
+        AgentRunRecord(
+            agent_name="recommendation",
+            input={},
+            output={"next_action": next_action},
+        ),
+        AgentRunRecord(
+            agent_name="evaluation",
+            input={},
+            output={
+                "confidence": 0.88,
+                "needs_human_review": False,
+                "missing_information": ["budget"],
+            },
+        ),
+    ]
+
+
 def test_create_lead_and_agent_runs():
     db = _make_session()
     data = LeadCreate(
@@ -34,24 +105,7 @@ def test_create_lead_and_agent_runs():
     lead = create_lead(db, data)
     db.commit()
 
-    runs = [
-        AgentRunRecord(
-            agent_name="qualification",
-            input={"company_name": "Acme"},
-            output={"qualified": True, "score": 88, "reason": "Strong fit"},
-        ),
-        AgentRunRecord(
-            agent_name="outreach",
-            input={"lead_data": {}, "qualification": {}},
-            output={"email": "Hi", "linkedin": "Hello", "questions": ["Q1"]},
-        ),
-        AgentRunRecord(
-            agent_name="recommendation",
-            input={"lead_data": {}, "qualification": {}, "outreach": {}},
-            output={"next_action": "book_meeting"},
-        ),
-    ]
-    save_agent_runs(db, lead.id, runs)
+    save_agent_runs(db, lead.id, _full_runs())
     db.commit()
 
     stored = get_lead(db, lead.id)
@@ -59,7 +113,11 @@ def test_create_lead_and_agent_runs():
     assert stored.company_name == "Acme"
     assert stored.results is not None
     assert stored.results.qualification.score == 88
+    assert stored.results.product_fit is not None
+    assert stored.results.product_fit.recommended_product == "Monday CRM"
     assert stored.results.recommendation.next_action == "book_meeting"
+    assert stored.results.evaluation is not None
+    assert stored.results.evaluation.confidence == 0.88
 
 
 def test_list_leads_newest_first():
@@ -69,15 +127,7 @@ def test_list_leads_newest_first():
             db,
             LeadCreate(company_name=name, message="test message"),
         )
-        save_agent_runs(
-            db,
-            lead.id,
-            [
-                AgentRunRecord("qualification", {}, {"qualified": True, "score": 70, "reason": "ok"}),
-                AgentRunRecord("outreach", {}, {"email": "e", "linkedin": "l", "questions": []}),
-                AgentRunRecord("recommendation", {}, {"next_action": "send_email"}),
-            ],
-        )
+        save_agent_runs(db, lead.id, _full_runs(score=70, next_action="send_email"))
     db.commit()
 
     leads = list_leads(db)
@@ -94,3 +144,31 @@ def test_partial_runs_return_no_results():
         ),
     ]
     assert _build_agent_results(runs) is None
+
+
+def test_legacy_three_agent_runs_still_load():
+    runs = [
+        AgentRun(
+            lead_id=1,
+            agent_name="qualification",
+            input={},
+            output={"qualified": True, "score": 80, "reason": "ok"},
+        ),
+        AgentRun(
+            lead_id=1,
+            agent_name="outreach",
+            input={},
+            output={"email": "e", "linkedin": "l", "questions": []},
+        ),
+        AgentRun(
+            lead_id=1,
+            agent_name="recommendation",
+            input={},
+            output={"next_action": "send_email"},
+        ),
+    ]
+    results = _build_agent_results(runs)
+    assert results is not None
+    assert results.qualification.score == 80
+    assert results.product_fit is None
+    assert results.evaluation is None

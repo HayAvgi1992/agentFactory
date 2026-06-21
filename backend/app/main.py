@@ -26,8 +26,8 @@ from app.schemas import (
 
 app = FastAPI(
     title="GTM Agent Factory",
-    description="Phase 3 — AI SDR workflow with evaluation metrics",
-    version="3.0.0",
+    description="Phase 4 — 7-agent target architecture with shared GTMState",
+    version="4.0.0",
 )
 
 app.add_middleware(
@@ -48,8 +48,8 @@ def on_startup():
 def health(db: Session = Depends(get_db)):
     return HealthResponse(
         status="ok",
-        version="3.0.0",
-        phase="3-evaluation",
+        version="4.0.0",
+        phase="4-target-architecture",
         persisted=True,
         lead_count=count_leads(db),
     )

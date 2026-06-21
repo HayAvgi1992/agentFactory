@@ -11,10 +11,36 @@ class LeadCreate(BaseModel):
     message: str
 
 
+class PlannerOutput(BaseModel):
+    required_sources: List[str]
+
+
+class ResearchOutput(BaseModel):
+    retrieved_documents: List[str]
+
+
+class RetrievedContextItem(BaseModel):
+    source: str
+    document_id: str
+    title: str
+    snippet: str
+
+
 class QualificationOutput(BaseModel):
     qualified: bool
     score: int
     reason: str
+    signals: List[str] = []
+    risks: List[str] = []
+    reasoning: Optional[str] = None
+
+
+class ProductFitOutput(BaseModel):
+    recommended_product: str
+    alternative_products: List[str] = []
+    confidence: float
+    matching_requirements: List[str] = []
+    reasoning: str
 
 
 class OutreachOutput(BaseModel):
@@ -27,10 +53,21 @@ class RecommendationOutput(BaseModel):
     next_action: str
 
 
+class EvaluationAgentOutput(BaseModel):
+    confidence: float
+    needs_human_review: bool
+    missing_information: List[str] = []
+
+
 class AgentResults(BaseModel):
+    planner: Optional[PlannerOutput] = None
+    research: Optional[ResearchOutput] = None
     qualification: QualificationOutput
+    product_fit: Optional[ProductFitOutput] = None
     outreach: OutreachOutput
     recommendation: RecommendationOutput
+    evaluation: Optional[EvaluationAgentOutput] = None
+    retrieved_context: List[RetrievedContextItem] = []
     processing_time_ms: int
 
 
@@ -52,12 +89,15 @@ class EvaluationMetrics(BaseModel):
     meeting_recommendation_rate: float
     average_score: Optional[float] = None
     processed_leads: int
+    average_confidence: Optional[float] = None
+    human_review_count: int = 0
+    human_review_rate: float = 0.0
 
 
 class HealthResponse(BaseModel):
     status: str
-    version: str = "3.0.0"
-    phase: str = "3-evaluation"
+    version: str = "4.0.0"
+    phase: str = "4-target-architecture"
     persisted: bool = True
     lead_count: int = 0
 

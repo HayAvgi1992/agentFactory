@@ -2,24 +2,23 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from openai import OpenAI
-
-from app.config import settings
+from app.agents.base import call_json_agent, get_client
+from app.state import GTMState
 
 MEETING_THRESHOLD = 75
+VALID_ACTIONS = {"book_meeting", "send_email", "nurture", "reject", "human_review"}
 
 
-def _get_client() -> Optional[OpenAI]:
-    if not settings.openai_api_key:
-        return None
-    return OpenAI(api_key=settings.openai_api_key)
-
-
-def _mock_recommendation(qualification: Dict[str, Any]) -> Dict[str, Any]:
+def _mock_recommendation(state: GTMState) -> Dict[str, Any]:
+    qualification = state.get("qualification") or {}
+    product_fit = state.get("product_fit") or {}
     score = qualification.get("score", 0)
+    fit_confidence = product_fit.get("confidence", 1.0)
+
+    if fit_confidence < 0.65 and qualification.get("qualified"):
+        return {"next_action": "human_review"}
 
     if score >= MEETING_THRESHOLD:
         next_action = "book_meeting"
@@ -33,46 +32,38 @@ def _mock_recommendation(qualification: Dict[str, Any]) -> Dict[str, Any]:
     return {"next_action": next_action}
 
 
-def run_recommendation_agent(
-    lead_data: Dict[str, Any],
-    qualification: Dict[str, Any],
-    outreach: Dict[str, Any],
-) -> Dict[str, Any]:
-    client = _get_client()
+def run_recommendation_agent(state: GTMState) -> Dict[str, Any]:
+    client = get_client()
     if not client:
-        return _mock_recommendation(qualification)
+        return _mock_recommendation(state)
+
+    lead_data = state["lead"]
+    qualification = state.get("qualification") or {}
+    product_fit = state.get("product_fit") or {}
 
     prompt = f"""Decide the next sales action for this lead.
 
 Company: {lead_data.get('company_name')}
 Qualification: score={qualification.get('score')}, qualified={qualification.get('qualified')}
-Reason: {qualification.get('reason')}
+Reasoning: {qualification.get('reasoning', qualification.get('reason'))}
+Product fit: {product_fit.get('recommended_product')} (confidence {product_fit.get('confidence')})
 
 Choose ONE next_action:
 - book_meeting: Strong lead, schedule a meeting (score >= {MEETING_THRESHOLD})
 - send_email: Qualified but needs warming up
 - nurture: Low intent, add to nurture campaign
 - reject: Poor fit, do not pursue
+- human_review: Uncertain — escalate for manual review
 
 Return JSON with exactly one key: next_action (string).
 """
 
-    response = client.chat.completions.create(
-        model=settings.openai_model,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a B2B sales strategist deciding the next action. Return structured JSON only.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        response_format={"type": "json_object"},
+    result = call_json_agent(
+        "You are a B2B sales strategist deciding the next action. Return structured JSON only.",
+        prompt,
         temperature=0.2,
     )
-
-    result = json.loads(response.choices[0].message.content)
     action = result.get("next_action", result.get("action", "send_email"))
-    valid = {"book_meeting", "send_email", "nurture", "reject"}
-    if action not in valid:
+    if action not in VALID_ACTIONS:
         action = "send_email"
     return {"next_action": action}

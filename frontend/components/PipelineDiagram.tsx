@@ -12,10 +12,28 @@ const STEPS = [
     output: "company, industry, size, message",
   },
   {
+    id: "planner",
+    icon: "🗺️",
+    label: "Planner Agent",
+    output: "required_sources",
+  },
+  {
+    id: "research",
+    icon: "🔍",
+    label: "Research Agent",
+    output: "retrieved documents",
+  },
+  {
     id: "qualification",
     icon: "📊",
     label: "Qualification Agent",
-    output: "qualified · score · reason",
+    output: "score · signals · risks",
+  },
+  {
+    id: "product_fit",
+    icon: "📦",
+    label: "Product Fit Agent",
+    output: "recommended product",
   },
   {
     id: "outreach",
@@ -28,6 +46,12 @@ const STEPS = [
     icon: "🎯",
     label: "Recommendation Agent",
     output: "next_action",
+  },
+  {
+    id: "evaluation",
+    icon: "✅",
+    label: "Evaluation Agent",
+    output: "confidence · human review",
   },
 ] as const;
 
@@ -92,7 +116,7 @@ export function PipelineDiagram({
   return (
     <div className="pipeline-diagram">
       <p className="pipeline-diagram-intro">
-        Each step runs for ~2s — green border marks progress; red means failure.
+        8-step agentic workflow — each step runs for ~2s. Green = progress, red = failure.
       </p>
 
       <div className="pipeline-track">
@@ -120,9 +144,19 @@ export function PipelineDiagram({
                     {results.qualification.qualified ? "Qualified" : "Not qualified"}
                   </span>
                 )}
+                {completed && results && step.id === "product_fit" && results.product_fit && (
+                  <span className="pipeline-node-result">
+                    → {results.product_fit.recommended_product}
+                  </span>
+                )}
                 {completed && results && step.id === "recommendation" && (
                   <span className="pipeline-node-result">
                     → {results.recommendation.next_action.replace(/_/g, " ")}
+                  </span>
+                )}
+                {completed && results && step.id === "evaluation" && results.evaluation && (
+                  <span className="pipeline-node-result">
+                    {Math.round(results.evaluation.confidence * 100)}% confidence
                   </span>
                 )}
                 {status === "failed" && (

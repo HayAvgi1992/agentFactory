@@ -10,7 +10,7 @@ const figtree = Figtree({
 
 export const metadata: Metadata = {
   title: "GTM Agent Factory",
-  description: "Phase 2 — AI SDR workflow with SQLite persistence",
+  description: "Phase 4 — 7-agent target architecture with shared GTMState",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -28,9 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div>
                 <h1>
                   GTM Agent Factory
-                  <span className="logo-by">by monday</span>
+                  <span className="logo-by">by Hay Avgi - RevAI Developer on Monday</span>
                 </h1>
-                <p>Phase 2 · SQLite persistence · Qualification → Outreach → Recommendation</p>
+                <p>Phase 4 · Target Architecture · Planner → Research → Qualification → Product Fit → Outreach → Recommendation → Evaluation</p>
               </div>
             </div>
             <nav className="nav-tags">

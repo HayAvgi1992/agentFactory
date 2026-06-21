@@ -1,9 +1,35 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface PlannerOutput {
+  required_sources: string[];
+}
+
+export interface ResearchOutput {
+  retrieved_documents: string[];
+}
+
+export interface RetrievedContextItem {
+  source: string;
+  document_id: string;
+  title: string;
+  snippet: string;
+}
+
 export interface QualificationOutput {
   qualified: boolean;
   score: number;
   reason: string;
+  signals: string[];
+  risks: string[];
+  reasoning?: string;
+}
+
+export interface ProductFitOutput {
+  recommended_product: string;
+  alternative_products: string[];
+  confidence: number;
+  matching_requirements: string[];
+  reasoning: string;
 }
 
 export interface OutreachOutput {
@@ -16,10 +42,21 @@ export interface RecommendationOutput {
   next_action: string;
 }
 
+export interface EvaluationAgentOutput {
+  confidence: number;
+  needs_human_review: boolean;
+  missing_information: string[];
+}
+
 export interface AgentResults {
+  planner?: PlannerOutput;
+  research?: ResearchOutput;
   qualification: QualificationOutput;
+  product_fit?: ProductFitOutput;
   outreach: OutreachOutput;
   recommendation: RecommendationOutput;
+  evaluation?: EvaluationAgentOutput;
+  retrieved_context: RetrievedContextItem[];
   processing_time_ms: number;
 }
 
@@ -41,6 +78,9 @@ export interface EvaluationMetrics {
   meeting_recommendation_rate: number;
   average_score: number | null;
   processed_leads: number;
+  average_confidence: number | null;
+  human_review_count: number;
+  human_review_rate: number;
 }
 
 export interface HealthResponse {

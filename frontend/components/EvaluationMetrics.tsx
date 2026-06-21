@@ -21,10 +21,14 @@ export function EvaluationMetricsPanel({ metrics }: EvaluationMetricsProps) {
 
   const avgScore =
     metrics.average_score !== null ? Math.round(metrics.average_score) : null;
+  const avgConfidence =
+    metrics.average_confidence !== null
+      ? Math.round(metrics.average_confidence * 100)
+      : null;
 
   return (
     <Card title="GTM Metrics">
-      <div className="stat-grid">
+      <div className="stats-row">
         <StatCard label="Total Leads" value={metrics.total_leads} />
         <StatCard
           label="Qualified Leads"
@@ -42,6 +46,17 @@ export function EvaluationMetricsPanel({ metrics }: EvaluationMetricsProps) {
           value={formatRate(metrics.meeting_recommendation_rate)}
           subtitle={`${metrics.meeting_recommendations} book meeting`}
           accent="hsla(240, 100%, 69.02%, 1)"
+        />
+        <StatCard
+          label="Avg Confidence"
+          value={avgConfidence !== null ? `${avgConfidence}%` : "—"}
+          subtitle="evaluation agent"
+        />
+        <StatCard
+          label="Human Review"
+          value={formatRate(metrics.human_review_rate)}
+          subtitle={`${metrics.human_review_count} flagged`}
+          accent={MONDAY.yellow}
         />
       </div>
     </Card>
