@@ -10,6 +10,12 @@ class AgentRunRecord(BaseModel):
     agent_name: str
     input: Dict[str, Any]
     output: Dict[str, Any]
+    prompt_version: Optional[str] = None
+    tools_used: List[str] = []
+    retrieved_documents: List[str] = []
+    confidence: Optional[float] = None
+    latency_ms: Optional[int] = None
+    token_usage: Optional[int] = None
 
 
 class LeadCreate(BaseModel):
@@ -23,12 +29,17 @@ class PlannerOutput(BaseModel):
     required_sources: List[str]
     reasoning: str = ""
     patterns: List[str] = []
+    context_inputs: List[str] = []
+    prompt_version: Optional[str] = None
 
 
 class ResearchOutput(BaseModel):
     retrieved_documents: List[str]
     reasoning: str = ""
     patterns_identified: List[str] = []
+    tools_used: List[str] = []
+    retrieval_methods: List[str] = []
+    prompt_version: Optional[str] = None
 
 
 class RetrievedContextItem(BaseModel):
@@ -78,6 +89,9 @@ class KnowledgeBaseResponse(BaseModel):
     empty_dirs: List[str] = []
     total_documents: int
     sources: List[KnowledgeSourceInfo]
+    vector_store: str = "chromadb"
+    embedding_model: Optional[str] = None
+    indexed_chunks: int = 0
 
 
 class OutreachOutput(BaseModel):
@@ -100,6 +114,8 @@ class EvaluationAgentOutput(BaseModel):
     needs_human_review: bool
     missing_information: List[str] = []
     reasoning: str = ""
+    context_inputs: List[str] = []
+    prompt_version: Optional[str] = None
 
 
 class AgentResults(BaseModel):
@@ -140,6 +156,8 @@ class LeadResponse(BaseModel):
     pipeline_error: Optional[str] = None
     pipeline_step_id: Optional[str] = None
     processing_time_ms: Optional[int] = None
+    human_review_status: Optional[str] = None
+    human_review_notes: Optional[str] = None
     results: Optional[AgentResults] = None
     state_snapshot: Optional[GTMStateSnapshot] = None
 
@@ -160,7 +178,7 @@ class EvaluationMetrics(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str = "4.0.0"
-    phase: str = "8-product-fit-knowledge"
+    phase: str = "10-19-rag-tools-observability"
     persisted: bool = True
     lead_count: int = 0
 
@@ -168,3 +186,64 @@ class HealthResponse(BaseModel):
 class LeadsSummaryResponse(BaseModel):
     total_leads: int
     persisted: bool = True
+
+
+class ToolInfo(BaseModel):
+    name: str
+    description: str
+    source: str
+
+
+class AgentRunObservability(BaseModel):
+    id: int
+    agent_name: str
+    prompt_version: Optional[str] = None
+    tools_used: List[str] = []
+    retrieved_documents: List[str] = []
+    confidence: Optional[float] = None
+    latency_ms: Optional[int] = None
+    token_usage: Optional[int] = None
+
+
+class LeadObservabilityResponse(BaseModel):
+    lead_id: int
+    runs: List[AgentRunObservability]
+
+
+class ExperimentSummary(BaseModel):
+    id: int
+    lead_id: int
+    agent_name: str
+    version_a: str
+    version_b: str
+    winner: Optional[str] = None
+    metrics: Dict[str, Any] = {}
+    created_at: datetime
+
+
+class ExperimentCompareRequest(BaseModel):
+    lead_id: int
+    agent_name: str = "qualification"
+    version_a: str = "v1"
+    version_b: str = "v2"
+
+
+class ExperimentCompareResponse(BaseModel):
+    id: int
+    lead_id: int
+    agent_name: str
+    version_a: str
+    version_b: str
+    result_a: Dict[str, Any]
+    result_b: Dict[str, Any]
+    winner: Optional[str] = None
+    metrics: Dict[str, Any] = {}
+
+
+class ExperimentRecord(ExperimentCompareResponse):
+    created_at: datetime
+
+
+class HumanReviewRequest(BaseModel):
+    decision: Literal["approve", "reject"]
+    notes: Optional[str] = None

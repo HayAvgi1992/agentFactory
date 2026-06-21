@@ -39,6 +39,12 @@ def _runs_from_state(state: GTMState) -> List[AgentRunRecord]:
             agent_name=run["agent_name"],
             input=run["input"],
             output=run["output"],
+            prompt_version=run.get("prompt_version"),
+            tools_used=list(run.get("tools_used") or []),
+            retrieved_documents=list(run.get("retrieved_documents") or []),
+            confidence=run.get("confidence"),
+            latency_ms=run.get("latency_ms"),
+            token_usage=run.get("token_usage"),
         )
         for run in state.get("agent_runs") or []
     ]

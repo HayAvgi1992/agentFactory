@@ -37,6 +37,8 @@ def normalize_planner(data: Optional[Dict[str, Any]]) -> Optional[PlannerOutput]
         required_sources=list(data.get("required_sources") or []),
         reasoning=str(data.get("reasoning") or ""),
         patterns=list(data.get("patterns") or []),
+        context_inputs=list(data.get("context_inputs") or []),
+        prompt_version=data.get("prompt_version"),
     )
 
 
@@ -50,6 +52,9 @@ def normalize_research(
         retrieved_documents=list(data.get("retrieved_documents") or []),
         reasoning=str(data.get("reasoning") or ""),
         patterns_identified=list(data.get("patterns_identified") or []),
+        tools_used=list(data.get("tools_used") or []),
+        retrieval_methods=list(data.get("retrieval_methods") or []),
+        prompt_version=data.get("prompt_version"),
     )
 
 
@@ -129,6 +134,8 @@ def normalize_evaluation(data: Optional[Dict[str, Any]]) -> Optional[EvaluationA
             needs_human_review=bool(data.get("needs_human_review", False)),
             missing_information=list(data.get("missing_information") or []),
             reasoning=str(data.get("reasoning") or ""),
+            context_inputs=list(data.get("context_inputs") or []),
+            prompt_version=data.get("prompt_version"),
         )
     except (TypeError, ValueError):
         return None

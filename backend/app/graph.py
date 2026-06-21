@@ -14,7 +14,9 @@ from app.agents.product_fit_agent import run_product_fit_agent
 from app.agents.qualification_agent import run_qualification_agent
 from app.agents.recommendation_agent import run_recommendation_agent
 from app.agents.research_agent import run_research_agent
+from app.agents.base import consume_token_usage, estimate_mock_token_usage
 from app.config import settings
+from app.observability import build_agent_run_record
 from app.state import (
     AgentRunDict,
     GTMState,
@@ -39,6 +41,9 @@ def _research_impl(state: GTMState) -> Dict[str, Any]:
             "retrieved_documents": result["retrieved_documents"],
             "patterns_identified": result.get("patterns_identified", []),
             "reasoning": result.get("reasoning", ""),
+            "tools_used": result.get("tools_used", []),
+            "retrieval_methods": result.get("retrieval_methods", []),
+            "prompt_version": result.get("prompt_version"),
         },
     }
 
@@ -98,15 +103,27 @@ def _instrument_node(
 
         time.sleep(settings.step_delay_sec)
         agent_input = snapshot_for_agent(state, agent_name)
+        step_start = time.perf_counter()
 
         try:
             patch = inner(state)
-            merged: GTMState = {**state, **patch}  # type: ignore[typeddict-item]
-            run: AgentRunDict = {
-                "agent_name": agent_name,
-                "input": agent_input,
-                "output": agent_output_from_state(merged, agent_name),
-            }
+            merged: GTMState = {**state, **patch}  # type: ignore[typedict-item]
+            latency_ms = int((time.perf_counter() - step_start) * 1000)
+            output = agent_output_from_state(merged, agent_name)
+            token_usage = consume_token_usage()
+            if not token_usage and not settings.openai_api_key:
+                token_usage = estimate_mock_token_usage(
+                    agent_name,
+                    str(agent_input)[:500],
+                )
+            if token_usage and "token_usage" not in output:
+                output = {**output, "token_usage": token_usage}
+            run: AgentRunDict = build_agent_run_record(
+                agent_name=agent_name,
+                agent_input=agent_input,
+                output=output,
+                latency_ms=latency_ms,
+            )
             return {**patch, "agent_runs": [run]}
         except Exception as exc:
             return {

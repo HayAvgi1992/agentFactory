@@ -1,14 +1,20 @@
-"""Planner Agent — decides which knowledge sources to retrieve before decisions."""
+"""Planner Agent — vision §10: orchestrate information gathering."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
 from app.agents.base import call_json_agent, get_client, reasoning_system_prompt
+from app.prompts.registry import get_prompt_instruction, get_prompt_version
 from app.state import GTMState, get_lead
-from app.tools.knowledge import SOURCE_DIRS
+from app.tools.knowledge import KNOWLEDGE_REGISTRY, list_knowledge_sources
+from app.tools.registry import list_tools
 
-ALL_SOURCES = list(SOURCE_DIRS.keys())
+ALL_SOURCES = list_knowledge_sources()
+
+
+def _available_source_labels() -> List[str]:
+    return [KNOWLEDGE_REGISTRY[s]["label"] for s in ALL_SOURCES if s in KNOWLEDGE_REGISTRY]
 
 
 def _mock_planner(lead_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -31,17 +37,19 @@ def _mock_planner(lead_data: Dict[str, Any]) -> Dict[str, Any]:
 
     seen: List[str] = []
     for source in sources:
-        if source not in seen:
+        if source not in seen and source in ALL_SOURCES:
             seen.append(source)
 
     reasoning = (
-        f"Planned retrieval from {len(seen)} sources based on "
-        f"{len(patterns)} observed patterns in the lead profile."
+        f"Before making qualification and product-fit decisions, retrieval from {len(seen)} "
+        f"sources will provide CRM context, product documentation, and proof points."
     )
     return {
         "required_sources": seen,
         "patterns": patterns,
         "reasoning": reasoning,
+        "context_inputs": ["Lead Information", "Available Knowledge Sources"],
+        "prompt_version": get_prompt_version("planner"),
     }
 
 
@@ -51,25 +59,25 @@ def run_planner_agent(state: GTMState) -> Dict[str, Any]:
     if not client:
         return _mock_planner(lead_data)
 
-    prompt = f"""Plan what business knowledge sources are needed to qualify and recommend products for this lead.
+    tools_desc = ", ".join(f"{t['name']}({t['source']})" for t in list_tools())
+    prompt = f"""{get_prompt_instruction("planner")}
 
 Company: {lead_data.get('company_name')}
 Industry: {lead_data.get('industry', 'unknown')}
 Company Size: {lead_data.get('company_size', 'unknown')}
 Message: {lead_data.get('message')}
 
-Available sources: {', '.join(ALL_SOURCES)}
-
-Analyze the lead, identify patterns, then decide which sources to retrieve.
+Available knowledge sources: {', '.join(ALL_SOURCES)}
+Registered tools: {tools_desc}
 
 Return JSON with:
-- required_sources (array of strings, subset of available sources)
-- patterns (array of strings — patterns you identified in the lead)
-- reasoning (string — why these sources are needed)
+- required_sources (array — subset of available sources)
+- patterns (array — patterns in the lead profile)
+- reasoning (string — why these sources are required before decisions)
 """
 
     result = call_json_agent(
-        reasoning_system_prompt("GTM planning agent deciding what context to gather"),
+        reasoning_system_prompt("GTM planner orchestrating information gathering"),
         prompt,
         temperature=0.2,
     )
@@ -79,4 +87,6 @@ Return JSON with:
         "required_sources": valid or ALL_SOURCES[:3],
         "patterns": list(result.get("patterns") or []),
         "reasoning": str(result.get("reasoning") or ""),
+        "context_inputs": ["Lead Information", "Available Knowledge Sources"],
+        "prompt_version": get_prompt_version("planner"),
     }

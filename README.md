@@ -1,26 +1,26 @@
 # GTM Agent Factory
 
-> Phase 3 — AI SDR workflow with SQLite persistence and GTM evaluation metrics.
+> **Portfolio demo** — 7-agent LangGraph GTM pipeline with SQLite persistence, local RAG, observability, prompt A/B testing, and human-in-the-loop review.
 
-Inspired by monday.com RevAI. The goal is **not** another chatbot — it's an AI system that solves a GTM business problem with measurable agent outputs.
+Inspired by monday.com RevAI. Demonstrates agent engineering, tool calling, evaluation, and business-impact metrics — not a chatbot wrapper.
+
+**Quick demo:** See [PORTFOLIO_DEMO.md](./PORTFOLIO_DEMO.md) for a 5-minute walkthrough.
 
 ---
 
-## Phase 3 Evaluation (Current)
+## What's included
 
-**Goal:** Measure business impact from persisted agent runs.
-
-**KPIs:**
-- Total Leads
-- Qualified Leads / Qualification Rate
-- Average Lead Score
-- Meeting Recommendation Rate
-
-**Not included yet** (future phases):
-- A/B prompt testing (Phase 4)
-- LangGraph (Phase 5)
-- Tool calling (Phase 6)
-- Vector DB / Embeddings / RAG (Phase 7)
+| Capability | Status |
+|------------|--------|
+| 7-agent LangGraph pipeline | ✅ |
+| Shared GTM state + reasoning UI | ✅ |
+| Knowledge base + ChromaDB RAG (embeddings) | ✅ |
+| Tool registry + research retrieval | ✅ |
+| Evaluation KPIs dashboard | ✅ |
+| Per-agent observability (latency, tokens, prompts) | ✅ |
+| Qualification prompt A/B (v1 vs v2) | ✅ |
+| Human review (HITL) | ✅ |
+| Production auth / CRM / deploy | 🔜 out of scope |
 
 ---
 

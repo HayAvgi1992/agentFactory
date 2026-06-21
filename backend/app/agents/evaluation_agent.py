@@ -1,4 +1,4 @@
-"""Evaluation Agent — assesses decision quality and flags human review."""
+"""Evaluation Agent — vision §12: measure decision quality."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from app.agents.base import call_json_agent, get_client, reasoning_system_prompt
 from app.agents.guardrails import HUMAN_REVIEW_CONFIDENCE_THRESHOLD, apply_evaluation_guardrails
+from app.prompts.registry import get_prompt_instruction, get_prompt_version
 from app.state import (
     GTMState,
     get_lead,
@@ -14,6 +15,14 @@ from app.state import (
     get_recommendation,
     get_retrieved_context,
 )
+
+
+def _evaluation_inputs(state: GTMState) -> List[str]:
+    labels = ["Lead Input", "Qualification Output", "Product Fit Output", "Recommendation Output"]
+    if get_retrieved_context(state):
+        labels.append("Retrieved Context")
+    return labels
+
 
 def _mock_evaluation(state: GTMState) -> Dict[str, Any]:
     qualification = get_qualification(state)
@@ -38,7 +47,7 @@ def _mock_evaluation(state: GTMState) -> Dict[str, Any]:
     needs_review = (
         confidence < HUMAN_REVIEW_CONFIDENCE_THRESHOLD
         or len(missing) >= 2
-        or recommendation.get("next_action") == "reject"
+        or recommendation.get("next_action") in ("reject", "human_review")
     )
 
     reasoning = (
@@ -51,6 +60,8 @@ def _mock_evaluation(state: GTMState) -> Dict[str, Any]:
         "needs_human_review": needs_review,
         "missing_information": missing,
         "reasoning": reasoning,
+        "context_inputs": _evaluation_inputs(state),
+        "prompt_version": get_prompt_version("evaluation"),
     }
     return apply_evaluation_guardrails(raw)
 
@@ -64,22 +75,21 @@ def run_evaluation_agent(state: GTMState) -> Dict[str, Any]:
     qualification = get_qualification(state)
     product_fit = get_product_fit(state)
     recommendation = get_recommendation(state)
+    context_count = len(get_retrieved_context(state))
 
-    prompt = f"""Evaluate the quality and completeness of this GTM agent pipeline output.
+    prompt = f"""{get_prompt_instruction("evaluation")}
 
 Lead: {lead_data.get('company_name')} — {lead_data.get('message')}
 Qualification: score={qualification.get('score')}, qualified={qualification.get('qualified')}
 Product fit: {product_fit.get('recommended_product')} (confidence {product_fit.get('confidence')})
 Recommendation: {recommendation.get('next_action')}
-Context documents retrieved: {len(get_retrieved_context(state))}
-
-Measure outcome quality — do not re-decide, evaluate the pipeline.
+Context documents retrieved: {context_count}
 
 Return JSON with:
-- confidence (float 0-1, overall pipeline confidence)
+- confidence (float 0-1)
 - needs_human_review (boolean)
 - missing_information (array of strings)
-- reasoning (string — explain your quality assessment)
+- reasoning (string — quality assessment per §12)
 """
 
     result = call_json_agent(
@@ -92,5 +102,7 @@ Return JSON with:
         "needs_human_review": bool(result.get("needs_human_review", False)),
         "missing_information": list(result.get("missing_information") or []),
         "reasoning": str(result.get("reasoning") or ""),
+        "context_inputs": _evaluation_inputs(state),
+        "prompt_version": get_prompt_version("evaluation"),
     }
     return apply_evaluation_guardrails(raw)

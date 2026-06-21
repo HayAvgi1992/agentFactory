@@ -964,6 +964,21 @@ textarea {
   font-weight: 600;
 }
 
+.review-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366f1;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.winner-column {
+  border: 1px solid var(--success);
+}
+
 .reasoning-block {
   margin-top: 0.5rem;
   padding: 0.65rem 0.75rem;
@@ -1020,5 +1035,34 @@ textarea {
 
 .knowledge-docs {
   margin: 0;
+  font-size: 0.8rem;
+}
+
+.human-review-panel {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 120, 80, 0.45);
+  border-radius: var(--radius);
+  background: rgba(255, 120, 80, 0.06);
+}
+
+.human-review-panel h4 {
+  margin: 0 0 0.5rem;
+}
+
+.review-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.observability-panel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.observability-table {
+  margin-top: 0.75rem;
   font-size: 0.8rem;
 }

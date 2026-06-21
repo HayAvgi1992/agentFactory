@@ -76,6 +76,11 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
               Required sources:{" "}
               <strong>{planner.required_sources.join(", ")}</strong>
             </p>
+            {planner.context_inputs && planner.context_inputs.length > 0 && (
+              <p className="context-inputs">
+                <strong>Inputs:</strong> {planner.context_inputs.join(" · ")}
+              </p>
+            )}
             <ReasoningBlock
               reasoning={planner.reasoning}
               patterns={planner.patterns}
@@ -93,6 +98,14 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
                   : "none"}
               </strong>
             </p>
+            {research.tools_used && research.tools_used.length > 0 && (
+              <p className="context-inputs">
+                <strong>Tools:</strong> {research.tools_used.join(" · ")}
+                {research.retrieval_methods && research.retrieval_methods.length > 0 && (
+                  <> · <strong>Methods:</strong> {research.retrieval_methods.join(", ")}</>
+                )}
+              </p>
+            )}
             <ReasoningBlock
               reasoning={research.reasoning}
               patterns={research.patterns_identified}
@@ -224,12 +237,19 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
             <ReasoningBlock
               reasoning={evaluation.reasoning}
               extra={
-                evaluation.missing_information.length > 0 ? (
-                  <p>
-                    <strong>Missing:</strong>{" "}
-                    {evaluation.missing_information.join(", ")}
-                  </p>
-                ) : undefined
+                <>
+                  {evaluation.context_inputs && evaluation.context_inputs.length > 0 && (
+                    <p>
+                      <strong>Inputs:</strong> {evaluation.context_inputs.join(" · ")}
+                    </p>
+                  )}
+                  {evaluation.missing_information.length > 0 ? (
+                    <p>
+                      <strong>Missing:</strong>{" "}
+                      {evaluation.missing_information.join(", ")}
+                    </p>
+                  ) : undefined}
+                </>
               }
             />
           </Step>

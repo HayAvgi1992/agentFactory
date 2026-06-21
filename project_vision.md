@@ -249,7 +249,77 @@ The Knowledge Base simulates:
 
 ---
 
-# 10. Local RAG
+
+# 10. Planner Agent
+
+Purpose:
+
+Determine what information is required before making decisions.
+
+Example output:
+
+```json
+{
+  "required_sources": [
+    "crm_accounts",
+    "product_catalog",
+    "case_studies"
+  ]
+}
+```
+
+The Planner Agent is responsible for orchestrating information gathering.
+
+---
+
+# 11. Research Agent
+
+Purpose:
+
+Collect relevant business context.
+
+Responsibilities:
+
+* Retrieve documents
+* Execute tool calls
+* Populate shared state
+
+Output:
+
+```json
+{
+  "retrieved_documents": [
+    "fintech_case_study",
+    "monday_crm"
+  ]
+}
+```
+
+---
+
+# 12. Evaluation Agent
+
+Purpose:
+
+Evaluate decision quality.
+
+Output:
+
+```json
+{
+  "confidence": 0.88,
+  "needs_human_review": false,
+  "missing_information": [
+    "budget"
+  ]
+}
+```
+
+The Evaluation Agent helps measure AI quality and reliability.
+
+---
+
+# 13. Local RAG
 
 Agents should retrieve information from the Knowledge Base.
 
@@ -275,7 +345,7 @@ The retrieved context becomes part of the shared state.
 
 ---
 
-# 11. Tool Calling
+# 14. Tool Calling
 
 Agents should be able to use tools.
 
@@ -299,74 +369,6 @@ Agents decide when and how to use them.
 
 ---
 
-# 12. Planner Agent
-
-Purpose:
-
-Determine what information is required before making decisions.
-
-Example output:
-
-```json
-{
-  "required_sources": [
-    "crm_accounts",
-    "product_catalog",
-    "case_studies"
-  ]
-}
-```
-
-The Planner Agent is responsible for orchestrating information gathering.
-
----
-
-# 13. Research Agent
-
-Purpose:
-
-Collect relevant business context.
-
-Responsibilities:
-
-* Retrieve documents
-* Execute tool calls
-* Populate shared state
-
-Output:
-
-```json
-{
-  "retrieved_documents": [
-    "fintech_case_study",
-    "monday_crm"
-  ]
-}
-```
-
----
-
-# 14. Evaluation Agent
-
-Purpose:
-
-Evaluate decision quality.
-
-Output:
-
-```json
-{
-  "confidence": 0.88,
-  "needs_human_review": false,
-  "missing_information": [
-    "budget"
-  ]
-}
-```
-
-The Evaluation Agent helps measure AI quality and reliability.
-
----
 
 # 15. Prompt Experimentation Platform
 
@@ -467,27 +469,29 @@ Phase 3
 
 Phase 4
 
-🔜 Prompt Experimentation & A/B Testing
+✅ Prompt Experimentation & A/B Testing
 
 Phase 5
 
-🔜 LangGraph Migration
+✅ LangGraph Migration
 
 Phase 6
 
-🔜 Knowledge Base + Local RAG
+✅ Knowledge Base + Local RAG (ChromaDB + embeddings)
 
 Phase 7
 
-🔜 Tool Calling + Research Agent
+✅ Tool Calling + Research Agent
 
 Phase 8
 
-🔜 Observability + Human Review
+✅ Observability + Human Review
 
 Phase 9
 
-🔜 Production Readiness
+🔜 Production Readiness (auth, CRM integrations, deployment — out of portfolio scope)
+
+**Portfolio demo status (2025):** Phases 1–8 complete for demo purposes. Phase 9 intentionally deferred.
 
 ---
 

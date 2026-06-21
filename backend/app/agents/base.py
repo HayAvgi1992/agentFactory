@@ -29,6 +29,22 @@ def get_client() -> Optional[OpenAI]:
     return OpenAI(api_key=settings.openai_api_key)
 
 
+_last_token_usage: int = 0
+
+
+def consume_token_usage() -> int:
+    """Return tokens from the most recent LLM call (§18 observability)."""
+    global _last_token_usage
+    usage = _last_token_usage
+    _last_token_usage = 0
+    return usage
+
+
+def estimate_mock_token_usage(system: str, prompt: str, output_chars: int = 200) -> int:
+    """Portfolio demo estimate when running without OpenAI (mock path)."""
+    return max(50, (len(system) + len(prompt) + output_chars) // 4)
+
+
 def format_retrieved_context(retrieved_context: list[dict[str, Any]]) -> str:
     if not retrieved_context:
         return "No retrieved context."
@@ -63,4 +79,7 @@ def call_json_agent(
     content = response.choices[0].message.content
     if not content:
         raise ValueError("Empty response from language model")
+    global _last_token_usage
+    if response.usage:
+        _last_token_usage = int(response.usage.total_tokens or 0)
     return json.loads(content)

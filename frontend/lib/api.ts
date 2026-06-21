@@ -4,12 +4,17 @@ export interface PlannerOutput {
   required_sources: string[];
   reasoning?: string;
   patterns?: string[];
+  context_inputs?: string[];
+  prompt_version?: string;
 }
 
 export interface ResearchOutput {
   retrieved_documents: string[];
   reasoning?: string;
   patterns_identified?: string[];
+  tools_used?: string[];
+  retrieval_methods?: string[];
+  prompt_version?: string;
 }
 
 export interface RetrievedContextItem {
@@ -62,6 +67,8 @@ export interface EvaluationAgentOutput {
   needs_human_review: boolean;
   missing_information: string[];
   reasoning?: string;
+  context_inputs?: string[];
+  prompt_version?: string;
 }
 
 export interface AgentResults {
@@ -100,6 +107,8 @@ export interface Lead {
   pipeline_error?: string | null;
   pipeline_step_id?: string | null;
   processing_time_ms?: number | null;
+  human_review_status?: string | null;
+  human_review_notes?: string | null;
   results?: AgentResults;
   state_snapshot?: GTMStateSnapshot | null;
 }
@@ -142,6 +151,54 @@ export interface KnowledgeBaseResponse {
   empty_dirs: string[];
   total_documents: number;
   sources: KnowledgeSourceInfo[];
+  vector_store?: string;
+  embedding_model?: string | null;
+  indexed_chunks?: number;
+}
+
+export interface AgentRunObservability {
+  id: number;
+  agent_name: string;
+  prompt_version?: string | null;
+  tools_used?: string[];
+  retrieved_documents?: string[];
+  confidence?: number | null;
+  latency_ms?: number | null;
+  token_usage?: number | null;
+}
+
+export interface LeadObservabilityResponse {
+  lead_id: number;
+  runs: AgentRunObservability[];
+}
+
+export interface ExperimentCompareResponse {
+  id: number;
+  lead_id: number;
+  agent_name: string;
+  version_a: string;
+  version_b: string;
+  result_a: Record<string, unknown>;
+  result_b: Record<string, unknown>;
+  winner?: string | null;
+  metrics: Record<string, unknown>;
+}
+
+export interface ExperimentRecord extends ExperimentCompareResponse {
+  created_at: string;
+}
+
+export interface ExperimentCompareRequest {
+  lead_id: number;
+  agent_name?: string;
+  version_a?: string;
+  version_b?: string;
+}
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  source: string;
 }
 
 export interface LeadsSummary {
@@ -178,6 +235,20 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   getKnowledgeBase: () => fetchApi<KnowledgeBaseResponse>("/api/knowledge"),
+  getTools: () => fetchApi<ToolInfo[]>("/api/tools"),
+  getLeadObservability: (id: number) =>
+    fetchApi<LeadObservabilityResponse>(`/api/leads/${id}/observability`),
+  getExperiments: () => fetchApi<ExperimentRecord[]>("/api/experiments"),
+  runExperimentCompare: (body: ExperimentCompareRequest) =>
+    fetchApi<ExperimentCompareResponse>("/api/experiments/compare", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  submitHumanReview: (id: number, decision: "approve" | "reject", notes?: string) =>
+    fetchApi<Lead>(`/api/leads/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, notes }),
+    }),
   getHealth: () => fetchApi<HealthResponse>("/health"),
   getEvaluationMetrics: () => fetchApi<EvaluationMetrics>("/api/evaluation/metrics"),
   getLeadsSummary: () => fetchApi<LeadsSummary>("/api/leads/summary"),

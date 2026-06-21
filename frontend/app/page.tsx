@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/Card";
 import { EvaluationMetricsPanel } from "@/components/EvaluationMetrics";
+import { ExperimentPanel } from "@/components/ExperimentPanel";
 import { KnowledgeBasePanel } from "@/components/KnowledgeBasePanel";
+import { HumanReviewPanel } from "@/components/HumanReviewPanel";
+import { ObservabilityPanel } from "@/components/ObservabilityPanel";
 import { LeadForm } from "@/components/LeadForm";
 import { LeadPipeline } from "@/components/LeadPipeline";
 import { PipelineDiagram } from "@/components/PipelineDiagram";
@@ -132,6 +135,10 @@ export default function HomePage() {
                         {lead.pipeline_status === "partial" && (
                           <span className="cell-sub partial-badge">Partial</span>
                         )}
+                        {lead.results?.evaluation?.needs_human_review &&
+                          !lead.human_review_status && (
+                            <span className="cell-sub review-badge">Review</span>
+                          )}
                       </td>
                       <td>{r ? `${r.qualification.score}/100` : "—"}</td>
                       <td>{r?.product_fit?.recommended_product ?? "—"}</td>
@@ -179,7 +186,16 @@ export default function HomePage() {
 
       {selectedLead && (
         <Card title="Lead Details">
+          <HumanReviewPanel
+            lead={selectedLead}
+            onUpdated={(updated) => {
+              setSelectedLead(updated);
+              setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            }}
+          />
           <LeadPipeline lead={selectedLead} />
+          <ExperimentPanel lead={selectedLead} />
+          <ObservabilityPanel lead={selectedLead} />
         </Card>
       )}
     </div>

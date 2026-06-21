@@ -21,6 +21,7 @@ venv/
 # Local data / databases
 *.db
 chroma_data/
+backend/data/chroma/
 
 # Node / Next.js (frontend also has frontend/.gitignore)
 node_modules/

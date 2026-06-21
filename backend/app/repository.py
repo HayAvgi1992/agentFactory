@@ -39,6 +39,12 @@ def save_agent_runs(db: Session, lead_id: int, runs: List[AgentRunRecord]) -> No
                 agent_name=run.agent_name,
                 input=run.input,
                 output=run.output,
+                prompt_version=run.prompt_version,
+                tools_used=run.tools_used or None,
+                retrieved_documents=run.retrieved_documents or None,
+                confidence=run.confidence,
+                latency_ms=run.latency_ms,
+                token_usage=run.token_usage,
             )
         )
 
@@ -91,6 +97,40 @@ def get_lead_state(db: Session, lead_id: int) -> Optional[GTMStateSnapshot]:
     return GTMStateSnapshot.model_validate(lead.state_snapshot)
 
 
+def get_lead_observability(db: Session, lead_id: int) -> Optional[List[dict]]:
+    lead = db.query(Lead).options(joinedload(Lead.agent_runs)).filter(Lead.id == lead_id).first()
+    if not lead:
+        return None
+    return [
+        {
+            "id": run.id,
+            "agent_name": run.agent_name,
+            "prompt_version": run.prompt_version,
+            "tools_used": run.tools_used or [],
+            "retrieved_documents": run.retrieved_documents or [],
+            "confidence": run.confidence,
+            "latency_ms": run.latency_ms,
+            "token_usage": run.token_usage,
+        }
+        for run in lead.agent_runs
+    ]
+
+
+def submit_human_review(
+    db: Session,
+    lead_id: int,
+    *,
+    decision: str,
+    notes: Optional[str] = None,
+) -> Optional[Lead]:
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead:
+        return None
+    lead.human_review_status = decision
+    lead.human_review_notes = notes
+    return lead
+
+
 def count_leads(db: Session) -> int:
     return db.query(Lead).count()
 
@@ -120,6 +160,8 @@ def _to_response(lead: Lead, results_override: Optional[AgentResults] = None) ->
         pipeline_error=lead.pipeline_error,
         pipeline_step_id=lead.pipeline_step_id,
         processing_time_ms=lead.processing_time_ms,
+        human_review_status=lead.human_review_status,
+        human_review_notes=lead.human_review_notes,
         results=results,
         state_snapshot=_load_state_snapshot(lead),
     )

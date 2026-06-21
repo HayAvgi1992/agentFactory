@@ -16,6 +16,16 @@ export function KnowledgeBasePanel({ knowledge }: KnowledgeBasePanelProps) {
       <p className="knowledge-base-meta">
         {knowledge.total_documents} documents ·{" "}
         {knowledge.valid ? "structure valid" : "missing folders"}
+        {knowledge.vector_store && (
+          <>
+            {" "}
+            · {knowledge.vector_store}
+            {knowledge.embedding_model ? ` (${knowledge.embedding_model})` : ""}
+            {typeof knowledge.indexed_chunks === "number" && knowledge.indexed_chunks > 0
+              ? ` · ${knowledge.indexed_chunks} chunks indexed`
+              : ""}
+          </>
+        )}
       </p>
       <div className="knowledge-sources">
         {knowledge.sources.map((source) => (

@@ -9,8 +9,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "GTM Agent Factory",
-  description: "Phase 4 — 7-agent target architecture with shared GTMState",
+  title: "GTM Agent Factory — Portfolio Demo",
+  description: "7-agent LangGraph GTM pipeline with RAG, observability, A/B prompts, and HITL",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   GTM Agent Factory
                   <span className="logo-by">by Hay Avgi - RevAI Developer on Monday</span>
                 </h1>
-                <p>Phase 8 · Product Fit + Knowledge Base · §8–§9 spec</p>
+                <p>Portfolio demo · 7-agent LangGraph · RAG · Observability · A/B · HITL</p>
               </div>
             </div>
             <nav className="nav-tags">

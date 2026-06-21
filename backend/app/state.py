@@ -60,10 +60,16 @@ class PipelineError(TypedDict):
     message: str
 
 
-class AgentRunDict(TypedDict):
+class AgentRunDict(TypedDict, total=False):
     agent_name: str
     input: Dict[str, Any]
     output: Dict[str, Any]
+    prompt_version: str
+    tools_used: List[str]
+    retrieved_documents: List[str]
+    confidence: float
+    latency_ms: int
+    token_usage: int
 
 
 class GTMState(TypedDict, total=False):
@@ -163,6 +169,9 @@ def agent_output_from_state(state: GTMState, agent_name: str) -> Dict[str, Any]:
             "retrieved_context": get_retrieved_context(state),
             "patterns_identified": research.get("patterns_identified", []),
             "reasoning": research.get("reasoning", ""),
+            "tools_used": research.get("tools_used", []),
+            "retrieval_methods": research.get("retrieval_methods", []),
+            "prompt_version": research.get("prompt_version"),
         }
     write_key = AGENT_WRITES.get(agent_name, agent_name)
     return dict(get_slice(state, write_key) or {})
