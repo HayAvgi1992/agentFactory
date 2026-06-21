@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   GTM Agent Factory
                   <span className="logo-by">by Hay Avgi - RevAI Developer on Monday</span>
                 </h1>
-                <p>Phase 7 · Qualification Agent · Playbook scoring · CRM + context inputs</p>
+                <p>Phase 8 · Product Fit + Knowledge Base · §8–§9 spec</p>
               </div>
             </div>
             <nav className="nav-tags">

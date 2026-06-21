@@ -39,6 +39,7 @@ export interface ProductFitOutput {
   reasoning: string;
   patterns?: string[];
   tradeoffs?: string[];
+  context_inputs?: string[];
 }
 
 export interface OutreachOutput {
@@ -124,6 +125,25 @@ export interface HealthResponse {
   lead_count: number;
 }
 
+export interface KnowledgeSourceInfo {
+  source: string;
+  label: string;
+  simulates: string;
+  description: string;
+  path: string;
+  document_count: number;
+  documents: string[];
+}
+
+export interface KnowledgeBaseResponse {
+  root: string;
+  valid: boolean;
+  missing_dirs: string[];
+  empty_dirs: string[];
+  total_documents: number;
+  sources: KnowledgeSourceInfo[];
+}
+
 export interface LeadsSummary {
   total_leads: number;
   persisted: boolean;
@@ -157,6 +177,7 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getKnowledgeBase: () => fetchApi<KnowledgeBaseResponse>("/api/knowledge"),
   getHealth: () => fetchApi<HealthResponse>("/health"),
   getEvaluationMetrics: () => fetchApi<EvaluationMetrics>("/api/evaluation/metrics"),
   getLeadsSummary: () => fetchApi<LeadsSummary>("/api/leads/summary"),

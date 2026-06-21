@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/Card";
 import { EvaluationMetricsPanel } from "@/components/EvaluationMetrics";
+import { KnowledgeBasePanel } from "@/components/KnowledgeBasePanel";
 import { LeadForm } from "@/components/LeadForm";
 import { LeadPipeline } from "@/components/LeadPipeline";
 import { PipelineDiagram } from "@/components/PipelineDiagram";
 import { api } from "@/lib/api";
-import type { EvaluationMetrics, Lead } from "@/lib/api";
+import type { EvaluationMetrics, KnowledgeBaseResponse, Lead } from "@/lib/api";
 import { ACTION_LABELS } from "@/lib/utils";
 
 export default function HomePage() {
@@ -18,17 +19,20 @@ export default function HomePage() {
 
   const [persistedCount, setPersistedCount] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<EvaluationMetrics | null>(null);
+  const [knowledge, setKnowledge] = useState<KnowledgeBaseResponse | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [leadsData, summary, metricsData] = await Promise.all([
+      const [leadsData, summary, metricsData, knowledgeData] = await Promise.all([
         api.getLeads(),
         api.getLeadsSummary(),
         api.getEvaluationMetrics(),
+        api.getKnowledgeBase(),
       ]);
       setLeads(leadsData);
       setPersistedCount(summary.total_leads);
       setMetrics(metricsData);
+      setKnowledge(knowledgeData);
       if (leadsData.length > 0 && !selectedLead) {
         setSelectedLead(leadsData[0]);
       }
@@ -78,6 +82,10 @@ export default function HomePage() {
       </div>
 
       <EvaluationMetricsPanel metrics={metrics} />
+
+      <Card title="Knowledge Base">
+        <KnowledgeBasePanel knowledge={knowledge} />
+      </Card>
 
       <Card
         title="MVP Dashboard"

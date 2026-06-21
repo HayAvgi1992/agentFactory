@@ -85,6 +85,7 @@ def normalize_product_fit(data: Optional[Dict[str, Any]]) -> Optional[ProductFit
             reasoning=str(data.get("reasoning") or ""),
             patterns=list(data.get("patterns") or []),
             tradeoffs=list(data.get("tradeoffs") or []),
+            context_inputs=list(data.get("context_inputs") or []),
         )
     except (TypeError, ValueError):
         return None

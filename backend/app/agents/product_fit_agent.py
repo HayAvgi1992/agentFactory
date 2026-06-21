@@ -1,59 +1,47 @@
-"""Product Fit Agent — recommends the best product for a qualified lead."""
+"""Product Fit Agent — vision §8: recommend the most appropriate product."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from app.agents.base import call_json_agent, format_retrieved_context, get_client, reasoning_system_prompt
+from app.agents.base import call_json_agent, get_client, reasoning_system_prompt
 from app.agents.guardrails import apply_product_fit_guardrails
+from app.agents.product_fit_context import (
+    available_product_fit_inputs,
+    build_product_fit_reasoning,
+    format_product_fit_prompt_context,
+    partition_product_fit_context,
+    recommend_product_from_signals,
+)
 from app.state import GTMState, get_lead, get_qualification, get_retrieved_context
 
-CRM_KEYWORDS = ("crm", "pipeline", "lead", "sales", "deal", "revenue")
-PM_KEYWORDS = ("project", "management", "collaboration", "task", "sprint", "team")
 
-
-def _mock_product_fit(lead_data: Dict[str, Any], qualification: Dict[str, Any]) -> Dict[str, Any]:
-    message = (lead_data.get("message") or "").lower()
-    industry = (lead_data.get("industry") or "").lower()
-    score = qualification.get("score", 0)
-
-    crm_score = sum(1 for kw in CRM_KEYWORDS if kw in message)
-    pm_score = sum(1 for kw in PM_KEYWORDS if kw in message)
-    patterns: List[str] = []
-    tradeoffs: List[str] = []
-
-    if crm_score:
-        patterns.append(f"CRM-related language ({crm_score} signals)")
-    if pm_score:
-        patterns.append(f"Project-management language ({pm_score} signals)")
-
-    if crm_score > pm_score:
-        product = "Monday CRM"
-        alt = ["Work Management"]
-        requirements = ["Pipeline visibility", "Lead tracking"]
-        reasoning = "Lead language emphasizes sales pipeline over project delivery."
-        tradeoffs.append("Work Management viable if collaboration becomes primary need")
-    else:
-        product = "Work Management"
-        alt = ["Monday CRM"]
-        requirements = ["Project coordination", "Team collaboration"]
-        reasoning = "Lead language emphasizes team coordination over sales tooling."
-        tradeoffs.append("Monday CRM viable if pipeline tracking becomes priority")
-
-    if industry == "fintech" and crm_score >= pm_score:
-        requirements.append("Deal velocity tracking")
-        patterns.append("Fintech industry — deal velocity matters")
-
-    confidence = min(0.95, 0.65 + score / 300 + max(crm_score, pm_score) * 0.05)
+def _mock_product_fit(
+    lead_data: Dict[str, Any],
+    qualification: Dict[str, Any],
+    retrieved_context: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    partitions = partition_product_fit_context(retrieved_context)
+    input_labels = available_product_fit_inputs(
+        partitions,
+        has_qualification=bool(qualification),
+    )
+    product, alt, requirements, patterns, tradeoffs, confidence = recommend_product_from_signals(
+        lead_data,
+        qualification,
+        partitions,
+    )
+    reasoning = build_product_fit_reasoning(lead_data, product, requirements, input_labels)
 
     raw = {
         "recommended_product": product,
         "alternative_products": alt,
-        "confidence": round(confidence, 2),
+        "confidence": confidence,
         "matching_requirements": requirements,
         "patterns": patterns,
         "tradeoffs": tradeoffs,
         "reasoning": reasoning,
+        "context_inputs": input_labels,
     }
     return apply_product_fit_guardrails(raw)
 
@@ -62,34 +50,32 @@ def run_product_fit_agent(state: GTMState) -> Dict[str, Any]:
     lead_data = get_lead(state)
     qualification = get_qualification(state)
     retrieved_context = get_retrieved_context(state)
+    partitions = partition_product_fit_context(retrieved_context)
+    input_labels = available_product_fit_inputs(
+        partitions,
+        has_qualification=bool(qualification),
+    )
 
     client = get_client()
     if not client:
-        return _mock_product_fit(lead_data, qualification)
+        return _mock_product_fit(lead_data, qualification, retrieved_context)
 
-    context_block = format_retrieved_context(retrieved_context)
-    prompt = f"""Recommend the best product for this B2B lead.
+    context_block = format_product_fit_prompt_context(lead_data, qualification, partitions)
+    prompt = f"""Recommend the most appropriate product for this B2B lead (vision §8).
 
-Company: {lead_data.get('company_name')}
-Industry: {lead_data.get('industry', 'unknown')}
-Message: {lead_data.get('message')}
-Qualification score: {qualification.get('score')}/100
-
-Retrieved context:
 {context_block}
 
-Products: Monday CRM (sales pipeline, lead tracking), Work Management (projects, collaboration).
-
-Identify patterns, weigh tradeoffs between products, then recommend.
+Use all inputs above. Match lead requirements to product capabilities and case study evidence.
+Explain WHY the recommended product fits — a human reviewer must understand your decision.
 
 Return JSON with:
-- recommended_product (string)
+- recommended_product (string — "Monday CRM" or "Work Management")
 - alternative_products (array of strings)
 - confidence (float 0-1)
-- matching_requirements (array of strings)
-- patterns (array — requirement patterns you identified)
+- matching_requirements (array — e.g. "Pipeline visibility", "Lead tracking")
+- patterns (array — requirement patterns identified)
 - tradeoffs (array — why not the alternative)
-- reasoning (string — explain WHY)
+- reasoning (string — explain WHY, per vision §8)
 """
 
     result = call_json_agent(
@@ -97,6 +83,7 @@ Return JSON with:
         prompt,
         temperature=0.3,
     )
+    reasoning = str(result.get("reasoning") or "")
     raw = {
         "recommended_product": result.get("recommended_product", "Work Management"),
         "alternative_products": list(result.get("alternative_products") or []),
@@ -104,6 +91,7 @@ Return JSON with:
         "matching_requirements": list(result.get("matching_requirements") or []),
         "patterns": list(result.get("patterns") or []),
         "tradeoffs": list(result.get("tradeoffs") or []),
-        "reasoning": str(result.get("reasoning") or ""),
+        "reasoning": reasoning,
+        "context_inputs": input_labels,
     }
     return apply_product_fit_guardrails(raw)

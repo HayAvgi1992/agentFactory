@@ -152,6 +152,11 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
               Recommended: <strong>{product_fit.recommended_product}</strong>{" "}
               ({Math.round(product_fit.confidence * 100)}% confidence)
             </p>
+            {product_fit.context_inputs && product_fit.context_inputs.length > 0 && (
+              <p className="context-inputs">
+                <strong>Inputs:</strong> {product_fit.context_inputs.join(" · ")}
+              </p>
+            )}
             <ReasoningBlock
               reasoning={product_fit.reasoning}
               patterns={product_fit.patterns}

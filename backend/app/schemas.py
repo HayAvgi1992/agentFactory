@@ -58,6 +58,26 @@ class ProductFitOutput(BaseModel):
     reasoning: str
     patterns: List[str] = []
     tradeoffs: List[str] = []
+    context_inputs: List[str] = []
+
+
+class KnowledgeSourceInfo(BaseModel):
+    source: str
+    label: str
+    simulates: str
+    description: str
+    path: str
+    document_count: int
+    documents: List[str]
+
+
+class KnowledgeBaseResponse(BaseModel):
+    root: str
+    valid: bool
+    missing_dirs: List[str] = []
+    empty_dirs: List[str] = []
+    total_documents: int
+    sources: List[KnowledgeSourceInfo]
 
 
 class OutreachOutput(BaseModel):
@@ -140,7 +160,7 @@ class EvaluationMetrics(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str = "4.0.0"
-    phase: str = "7-qualification-agent"
+    phase: str = "8-product-fit-knowledge"
     persisted: bool = True
     lead_count: int = 0
 

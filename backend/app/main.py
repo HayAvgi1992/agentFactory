@@ -22,10 +22,13 @@ from app.schemas import (
     EvaluationMetrics,
     GTMStateSnapshot,
     HealthResponse,
+    KnowledgeBaseResponse,
+    KnowledgeSourceInfo,
     LeadCreate,
     LeadResponse,
     LeadsSummaryResponse,
 )
+from app.tools.knowledge import validate_knowledge_base
 
 app = FastAPI(
     title="GTM Agent Factory",
@@ -52,9 +55,23 @@ def health(db: Session = Depends(get_db)):
     return HealthResponse(
         status="ok",
         version="4.0.0",
-        phase="7-qualification-agent",
+        phase="8-product-fit-knowledge",
         persisted=True,
         lead_count=count_leads(db),
+    )
+
+
+@app.get("/api/knowledge", response_model=KnowledgeBaseResponse)
+def get_knowledge_base():
+    """Knowledge base inventory — vision §9."""
+    raw = validate_knowledge_base()
+    return KnowledgeBaseResponse(
+        root=raw["root"],
+        valid=raw["valid"],
+        missing_dirs=raw["missing_dirs"],
+        empty_dirs=raw["empty_dirs"],
+        total_documents=raw["total_documents"],
+        sources=[KnowledgeSourceInfo(**item) for item in raw["sources"]],
     )
 
 
