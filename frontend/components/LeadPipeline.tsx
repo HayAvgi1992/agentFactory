@@ -1,5 +1,7 @@
 "use client";
 
+import { ReasoningBlock } from "@/components/ReasoningBlock";
+import { SharedStatePanel } from "@/components/SharedStatePanel";
 import { Badge } from "./Card";
 import type { Lead } from "@/lib/api";
 import { ACTION_LABELS, formatDate } from "@/lib/utils";
@@ -10,8 +12,22 @@ interface LeadPipelineProps {
 
 export function LeadPipeline({ lead }: LeadPipelineProps) {
   const results = lead.results;
-  if (!results) {
+  if (!results && !lead.state_snapshot) {
     return <p className="empty">No results yet.</p>;
+  }
+
+  if (!results) {
+    return (
+      <div className="pipeline">
+        <div className="pipeline-header">
+          <div>
+            <h3>{lead.company_name}</h3>
+            <p className="meta">Pipeline partial — shared state only</p>
+          </div>
+        </div>
+        <SharedStatePanel snapshot={lead.state_snapshot} />
+      </div>
+    );
   }
 
   const {
@@ -24,7 +40,9 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
     evaluation,
     retrieved_context,
   } = results;
-  const action = ACTION_LABELS[recommendation.next_action];
+  const action = recommendation
+    ? ACTION_LABELS[recommendation.next_action]
+    : null;
   let stepNumber = 0;
 
   return (
@@ -58,6 +76,10 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
               Required sources:{" "}
               <strong>{planner.required_sources.join(", ")}</strong>
             </p>
+            <ReasoningBlock
+              reasoning={planner.reasoning}
+              patterns={planner.patterns}
+            />
           </Step>
         )}
 
@@ -71,6 +93,10 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
                   : "none"}
               </strong>
             </p>
+            <ReasoningBlock
+              reasoning={research.reasoning}
+              patterns={research.patterns_identified}
+            />
             {retrieved_context.length > 0 && (
               <details open>
                 <summary>Context snippets ({retrieved_context.length})</summary>
@@ -94,17 +120,30 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
               {qualification.qualified ? "Qualified" : "Not Qualified"}
             </Badge>
           </div>
-          <p>{qualification.reasoning || qualification.reason}</p>
-          {qualification.signals.length > 0 && (
-            <p>
-              <strong>Signals:</strong> {qualification.signals.join(" · ")}
+          {qualification.context_inputs && qualification.context_inputs.length > 0 && (
+            <p className="context-inputs">
+              <strong>Inputs:</strong> {qualification.context_inputs.join(" · ")}
             </p>
           )}
-          {qualification.risks.length > 0 && (
-            <p>
-              <strong>Risks:</strong> {qualification.risks.join(" · ")}
-            </p>
-          )}
+          <ReasoningBlock
+            reasoning={qualification.reasoning || qualification.reason}
+            patterns={qualification.patterns}
+            tradeoffs={qualification.tradeoffs}
+            extra={
+              <>
+                {qualification.signals.length > 0 && (
+                  <p>
+                    <strong>Signals:</strong> {qualification.signals.join(" · ")}
+                  </p>
+                )}
+                {qualification.risks.length > 0 && (
+                  <p>
+                    <strong>Risks:</strong> {qualification.risks.join(" · ")}
+                  </p>
+                )}
+              </>
+            }
+          />
         </Step>
 
         {product_fit && (
@@ -113,40 +152,59 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
               Recommended: <strong>{product_fit.recommended_product}</strong>{" "}
               ({Math.round(product_fit.confidence * 100)}% confidence)
             </p>
-            <p>{product_fit.reasoning}</p>
-            {product_fit.matching_requirements.length > 0 && (
-              <p>
-                <strong>Requirements:</strong>{" "}
-                {product_fit.matching_requirements.join(" · ")}
-              </p>
-            )}
+            <ReasoningBlock
+              reasoning={product_fit.reasoning}
+              patterns={product_fit.patterns}
+              tradeoffs={product_fit.tradeoffs}
+              extra={
+                product_fit.matching_requirements.length > 0 ? (
+                  <p>
+                    <strong>Requirements:</strong>{" "}
+                    {product_fit.matching_requirements.join(" · ")}
+                  </p>
+                ) : undefined
+              }
+            />
           </Step>
         )}
 
-        <Step number={++stepNumber} title="Outreach Agent">
-          <details>
-            <summary>Email</summary>
-            <pre>{outreach.email}</pre>
-          </details>
-          <details>
-            <summary>LinkedIn Message</summary>
-            <p>{outreach.linkedin}</p>
-          </details>
-          <details open>
-            <summary>Discovery Questions</summary>
-            <ol>
-              {outreach.questions.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
-            </ol>
-          </details>
-        </Step>
+        {outreach && (
+          <Step number={++stepNumber} title="Outreach Agent">
+            <ReasoningBlock
+              reasoning={outreach.reasoning}
+              patterns={outreach.patterns}
+            />
+            <details>
+              <summary>Email</summary>
+              <pre>{outreach.email}</pre>
+            </details>
+            <details>
+              <summary>LinkedIn Message</summary>
+              <p>{outreach.linkedin}</p>
+            </details>
+            <details open>
+              <summary>Discovery Questions</summary>
+              <ol>
+                {outreach.questions.map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ol>
+            </details>
+          </Step>
+        )}
 
-        <Step number={++stepNumber} title="Recommendation Agent">
-          <p>
-            Next action: <strong>{recommendation.next_action}</strong>
-          </p>
-        </Step>
+        {recommendation && (
+          <Step number={++stepNumber} title="Recommendation Agent">
+            <p>
+              Next action: <strong>{recommendation.next_action}</strong>
+            </p>
+            <ReasoningBlock
+              reasoning={recommendation.reasoning}
+              patterns={recommendation.patterns}
+              tradeoffs={recommendation.tradeoffs}
+            />
+          </Step>
+        )}
 
         {evaluation && (
           <Step number={++stepNumber} title="Evaluation Agent">
@@ -158,12 +216,17 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
                 {evaluation.needs_human_review ? "Needs Review" : "Auto-approved"}
               </Badge>
             </div>
-            {evaluation.missing_information.length > 0 && (
-              <p>
-                <strong>Missing:</strong>{" "}
-                {evaluation.missing_information.join(", ")}
-              </p>
-            )}
+            <ReasoningBlock
+              reasoning={evaluation.reasoning}
+              extra={
+                evaluation.missing_information.length > 0 ? (
+                  <p>
+                    <strong>Missing:</strong>{" "}
+                    {evaluation.missing_information.join(", ")}
+                  </p>
+                ) : undefined
+              }
+            />
           </Step>
         )}
       </div>
@@ -175,6 +238,8 @@ export function LeadPipeline({ lead }: LeadPipelineProps) {
           <> · Partial: {lead.pipeline_error}</>
         )}
       </p>
+
+      <SharedStatePanel snapshot={lead.state_snapshot} />
     </div>
   );
 }

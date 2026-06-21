@@ -21,10 +21,14 @@ class LeadCreate(BaseModel):
 
 class PlannerOutput(BaseModel):
     required_sources: List[str]
+    reasoning: str = ""
+    patterns: List[str] = []
 
 
 class ResearchOutput(BaseModel):
     retrieved_documents: List[str]
+    reasoning: str = ""
+    patterns_identified: List[str] = []
 
 
 class RetrievedContextItem(BaseModel):
@@ -40,7 +44,10 @@ class QualificationOutput(BaseModel):
     reason: str
     signals: List[str] = []
     risks: List[str] = []
+    patterns: List[str] = []
+    tradeoffs: List[str] = []
     reasoning: Optional[str] = None
+    context_inputs: List[str] = []
 
 
 class ProductFitOutput(BaseModel):
@@ -49,22 +56,30 @@ class ProductFitOutput(BaseModel):
     confidence: float
     matching_requirements: List[str] = []
     reasoning: str
+    patterns: List[str] = []
+    tradeoffs: List[str] = []
 
 
 class OutreachOutput(BaseModel):
     email: str
     linkedin: str
     questions: List[str]
+    reasoning: str = ""
+    patterns: List[str] = []
 
 
 class RecommendationOutput(BaseModel):
     next_action: str
+    reasoning: str = ""
+    patterns: List[str] = []
+    tradeoffs: List[str] = []
 
 
 class EvaluationAgentOutput(BaseModel):
     confidence: float
     needs_human_review: bool
     missing_information: List[str] = []
+    reasoning: str = ""
 
 
 class AgentResults(BaseModel):
@@ -72,11 +87,26 @@ class AgentResults(BaseModel):
     research: Optional[ResearchOutput] = None
     qualification: QualificationOutput
     product_fit: Optional[ProductFitOutput] = None
-    outreach: OutreachOutput
-    recommendation: RecommendationOutput
+    outreach: Optional[OutreachOutput] = None
+    recommendation: Optional[RecommendationOutput] = None
     evaluation: Optional[EvaluationAgentOutput] = None
     retrieved_context: List[RetrievedContextItem] = []
     processing_time_ms: int
+
+
+class GTMStateSnapshot(BaseModel):
+    """Public view of shared LangGraph state (vision §5)."""
+
+    lead: Dict[str, Any]
+    planner: Optional[Dict[str, Any]] = None
+    research: Optional[Dict[str, Any]] = None
+    retrieved_context: List[RetrievedContextItem] = []
+    qualification: Optional[Dict[str, Any]] = None
+    product_fit: Optional[Dict[str, Any]] = None
+    outreach: Optional[Dict[str, Any]] = None
+    recommendation: Optional[Dict[str, Any]] = None
+    evaluation: Optional[Dict[str, Any]] = None
+    populated_fields: List[str] = []
 
 
 class LeadResponse(BaseModel):
@@ -91,6 +121,7 @@ class LeadResponse(BaseModel):
     pipeline_step_id: Optional[str] = None
     processing_time_ms: Optional[int] = None
     results: Optional[AgentResults] = None
+    state_snapshot: Optional[GTMStateSnapshot] = None
 
 
 class EvaluationMetrics(BaseModel):
@@ -109,7 +140,7 @@ class EvaluationMetrics(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str = "4.0.0"
-    phase: str = "4-target-architecture"
+    phase: str = "7-qualification-agent"
     persisted: bool = True
     lead_count: int = 0
 

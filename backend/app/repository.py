@@ -8,7 +8,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.models import AgentRun, Lead
 from app.results_builder import build_agent_results_from_runs
-from app.schemas import AgentResults, AgentRunRecord, LeadCreate, LeadResponse, PipelineStatus
+from app.schemas import (
+    AgentResults,
+    AgentRunRecord,
+    GTMStateSnapshot,
+    LeadCreate,
+    LeadResponse,
+    PipelineStatus,
+)
 
 
 def create_lead(db: Session, data: LeadCreate) -> Lead:
@@ -44,12 +51,15 @@ def update_lead_pipeline(
     error: Optional[str] = None,
     step_id: Optional[str] = None,
     processing_time_ms: Optional[int] = None,
+    state_snapshot: Optional[GTMStateSnapshot] = None,
 ) -> None:
     lead = db.query(Lead).filter(Lead.id == lead_id).one()
     lead.pipeline_status = status
     lead.pipeline_error = error
     lead.pipeline_step_id = step_id
     lead.processing_time_ms = processing_time_ms
+    if state_snapshot is not None:
+        lead.state_snapshot = state_snapshot.model_dump()
 
 
 def list_leads(db: Session) -> List[LeadResponse]:
@@ -74,8 +84,21 @@ def get_lead(db: Session, lead_id: int) -> Optional[LeadResponse]:
     return _to_response(lead)
 
 
+def get_lead_state(db: Session, lead_id: int) -> Optional[GTMStateSnapshot]:
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead or not lead.state_snapshot:
+        return None
+    return GTMStateSnapshot.model_validate(lead.state_snapshot)
+
+
 def count_leads(db: Session) -> int:
     return db.query(Lead).count()
+
+
+def _load_state_snapshot(lead: Lead) -> Optional[GTMStateSnapshot]:
+    if not lead.state_snapshot:
+        return None
+    return GTMStateSnapshot.model_validate(lead.state_snapshot)
 
 
 def _to_response(lead: Lead, results_override: Optional[AgentResults] = None) -> LeadResponse:
@@ -98,6 +121,7 @@ def _to_response(lead: Lead, results_override: Optional[AgentResults] = None) ->
         pipeline_step_id=lead.pipeline_step_id,
         processing_time_ms=lead.processing_time_ms,
         results=results,
+        state_snapshot=_load_state_snapshot(lead),
     )
 
 
@@ -109,6 +133,7 @@ def lead_to_response(
     pipeline_error: Optional[str] = None,
     pipeline_step_id: Optional[str] = None,
     processing_time_ms: Optional[int] = None,
+    state_snapshot: Optional[GTMStateSnapshot] = None,
 ) -> LeadResponse:
     """Build response after submit, using pipeline output when available."""
     response = _to_response(lead, results_override=pipeline_results)
@@ -118,5 +143,6 @@ def lead_to_response(
             "pipeline_error": pipeline_error,
             "pipeline_step_id": pipeline_step_id,
             "processing_time_ms": processing_time_ms,
+            "state_snapshot": state_snapshot or response.state_snapshot,
         }
     )

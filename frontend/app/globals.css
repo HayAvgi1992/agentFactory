@@ -916,3 +916,74 @@ textarea {
   font-weight: 600;
   color: white;
 }
+
+.shared-state-intro {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.shared-state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.shared-state-slice {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+.shared-state-slice h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.shared-state-slice pre {
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+}
+
+.partial-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(255, 204, 0, 0.2);
+  color: #8a6d00;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.reasoning-block {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid hsla(240, 100%, 69.02%, 0.6);
+  background: rgba(97, 97, 255, 0.04);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 0.85rem;
+}
+
+.reasoning-block p {
+  margin: 0.25rem 0;
+}
+
+.reasoning-text {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.context-inputs {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

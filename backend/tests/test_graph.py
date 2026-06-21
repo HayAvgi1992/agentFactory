@@ -48,6 +48,8 @@ def test_pipeline_mock_run_produces_full_state():
 
     assert result.status == "complete"
     assert len(result.runs) == 7
+    assert result.state_snapshot is not None
+    assert "qualification" in result.state_snapshot.populated_fields
     assert result.results is not None
     assert result.results.planner is not None
     assert result.results.research is not None

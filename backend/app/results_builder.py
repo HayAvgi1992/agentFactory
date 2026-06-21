@@ -33,7 +33,11 @@ LEGACY_AGENT_ORDER = ("qualification", "outreach", "recommendation")
 def normalize_planner(data: Optional[Dict[str, Any]]) -> Optional[PlannerOutput]:
     if not data:
         return None
-    return PlannerOutput(required_sources=list(data.get("required_sources") or []))
+    return PlannerOutput(
+        required_sources=list(data.get("required_sources") or []),
+        reasoning=str(data.get("reasoning") or ""),
+        patterns=list(data.get("patterns") or []),
+    )
 
 
 def normalize_research(
@@ -42,7 +46,11 @@ def normalize_research(
 ) -> Optional[ResearchOutput]:
     if not data:
         return None
-    return ResearchOutput(retrieved_documents=list(data.get("retrieved_documents") or []))
+    return ResearchOutput(
+        retrieved_documents=list(data.get("retrieved_documents") or []),
+        reasoning=str(data.get("reasoning") or ""),
+        patterns_identified=list(data.get("patterns_identified") or []),
+    )
 
 
 def normalize_qualification(data: Optional[Dict[str, Any]]) -> Optional[QualificationOutput]:
@@ -56,7 +64,10 @@ def normalize_qualification(data: Optional[Dict[str, Any]]) -> Optional[Qualific
             reason=str(data.get("reason") or reasoning),
             signals=list(data.get("signals") or []),
             risks=list(data.get("risks") or []),
+            patterns=list(data.get("patterns") or []),
+            tradeoffs=list(data.get("tradeoffs") or []),
             reasoning=reasoning or None,
+            context_inputs=list(data.get("context_inputs") or []),
         )
     except (TypeError, ValueError):
         return None
@@ -72,6 +83,8 @@ def normalize_product_fit(data: Optional[Dict[str, Any]]) -> Optional[ProductFit
             confidence=float(data.get("confidence", 0)),
             matching_requirements=list(data.get("matching_requirements") or []),
             reasoning=str(data.get("reasoning") or ""),
+            patterns=list(data.get("patterns") or []),
+            tradeoffs=list(data.get("tradeoffs") or []),
         )
     except (TypeError, ValueError):
         return None
@@ -85,6 +98,8 @@ def normalize_outreach(data: Optional[Dict[str, Any]]) -> Optional[OutreachOutpu
             email=str(data.get("email") or ""),
             linkedin=str(data.get("linkedin") or ""),
             questions=list(data.get("questions") or []),
+            reasoning=str(data.get("reasoning") or ""),
+            patterns=list(data.get("patterns") or []),
         )
     except (TypeError, ValueError):
         return None
@@ -96,7 +111,12 @@ def normalize_recommendation(data: Optional[Dict[str, Any]]) -> Optional[Recomme
     action = data.get("next_action") or data.get("action")
     if not action:
         return None
-    return RecommendationOutput(next_action=str(action))
+    return RecommendationOutput(
+        next_action=str(action),
+        reasoning=str(data.get("reasoning") or ""),
+        patterns=list(data.get("patterns") or []),
+        tradeoffs=list(data.get("tradeoffs") or []),
+    )
 
 
 def normalize_evaluation(data: Optional[Dict[str, Any]]) -> Optional[EvaluationAgentOutput]:
@@ -107,6 +127,7 @@ def normalize_evaluation(data: Optional[Dict[str, Any]]) -> Optional[EvaluationA
             confidence=float(data.get("confidence", 0)),
             needs_human_review=bool(data.get("needs_human_review", False)),
             missing_information=list(data.get("missing_information") or []),
+            reasoning=str(data.get("reasoning") or ""),
         )
     except (TypeError, ValueError):
         return None
@@ -135,9 +156,8 @@ def build_agent_results_from_state(
     state: GTMState,
     processing_time_ms: int,
 ) -> Optional[AgentResults]:
-    """Build AgentResults from graph state when the full pipeline completed."""
-    if state.get("pipeline_error"):
-        return None
+    """Build AgentResults from graph state (full or partial after pipeline_error)."""
+    require_full = not state.get("pipeline_error")
     return _assemble_results(
         planner=state.get("planner"),
         research=state.get("research"),
@@ -148,7 +168,34 @@ def build_agent_results_from_state(
         evaluation=state.get("evaluation"),
         retrieved_context=state.get("retrieved_context"),
         processing_time_ms=processing_time_ms,
-        require_full=True,
+        require_full=require_full,
+    )
+
+
+def _outputs_from_runs(by_name: Dict[str, AgentRun]) -> tuple[
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[Dict[str, Any]],
+    Optional[List[Dict[str, Any]]],
+]:
+    research_run = by_name.get("research")
+    retrieved_context = None
+    if research_run is not None:
+        retrieved_context = research_run.output.get("retrieved_context")
+
+    return (
+        by_name["planner"].output if "planner" in by_name else None,
+        by_name["research"].output if "research" in by_name else None,
+        by_name["qualification"].output if "qualification" in by_name else None,
+        by_name["product_fit"].output if "product_fit" in by_name else None,
+        by_name["outreach"].output if "outreach" in by_name else None,
+        by_name["recommendation"].output if "recommendation" in by_name else None,
+        by_name["evaluation"].output if "evaluation" in by_name else None,
+        retrieved_context,
     )
 
 
@@ -159,7 +206,16 @@ def build_agent_results_from_runs(
     by_name = {run.agent_name: run for run in runs}
 
     if all(name in by_name for name in AGENT_ORDER):
-        research_run = by_name["research"]
+        (
+            planner,
+            research,
+            qualification,
+            product_fit,
+            outreach,
+            recommendation,
+            evaluation,
+            retrieved_context,
+        ) = _outputs_from_runs(by_name)
         elapsed = processing_time_ms
         if elapsed is None:
             first_at = by_name["planner"].created_at
@@ -170,14 +226,14 @@ def build_agent_results_from_runs(
                 else 0
             )
         return _assemble_results(
-            planner=by_name["planner"].output,
-            research=by_name["research"].output,
-            qualification=by_name["qualification"].output,
-            product_fit=by_name["product_fit"].output,
-            outreach=by_name["outreach"].output,
-            recommendation=by_name["recommendation"].output,
-            evaluation=by_name["evaluation"].output,
-            retrieved_context=research_run.output.get("retrieved_context"),
+            planner=planner,
+            research=research,
+            qualification=qualification,
+            product_fit=product_fit,
+            outreach=outreach,
+            recommendation=recommendation,
+            evaluation=evaluation,
+            retrieved_context=retrieved_context,
             processing_time_ms=elapsed,
             require_full=True,
         )
@@ -204,7 +260,32 @@ def build_agent_results_from_runs(
             processing_time_ms=elapsed,
         )
 
-    return None
+    if "qualification" not in by_name:
+        return None
+
+    (
+        planner,
+        research,
+        qualification,
+        product_fit,
+        outreach,
+        recommendation,
+        evaluation,
+        retrieved_context,
+    ) = _outputs_from_runs(by_name)
+    elapsed = processing_time_ms if processing_time_ms is not None else 0
+    return _assemble_results(
+        planner=planner,
+        research=research,
+        qualification=qualification,
+        product_fit=product_fit,
+        outreach=outreach,
+        recommendation=recommendation,
+        evaluation=evaluation,
+        retrieved_context=retrieved_context,
+        processing_time_ms=elapsed,
+        require_full=False,
+    )
 
 
 def _assemble_results(
@@ -242,7 +323,7 @@ def _assemble_results(
         if any(item is None for item in required):
             return None
 
-    if not norm_qualification or not norm_outreach or not norm_recommendation:
+    if not norm_qualification:
         return None
 
     return AgentResults(

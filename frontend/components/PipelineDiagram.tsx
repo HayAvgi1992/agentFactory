@@ -149,7 +149,7 @@ export function PipelineDiagram({
                     → {results.product_fit.recommended_product}
                   </span>
                 )}
-                {completed && results && step.id === "recommendation" && (
+                {completed && results && step.id === "recommendation" && results.recommendation && (
                   <span className="pipeline-node-result">
                     → {results.recommendation.next_action.replace(/_/g, " ")}
                   </span>

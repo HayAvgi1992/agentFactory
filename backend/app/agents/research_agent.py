@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from app.state import GTMState
+from app.state import GTMState, get_lead, get_planner
 from app.tools import knowledge as kb
 
 
@@ -28,8 +28,8 @@ def _search_source(source: str, lead_data: Dict[str, Any]) -> List[Dict[str, Any
 
 
 def run_research_agent(state: GTMState) -> Dict[str, Any]:
-    lead_data = state["lead"]
-    planner = state.get("planner") or {}
+    lead_data = get_lead(state)
+    planner = get_planner(state)
     required_sources = planner.get("required_sources") or [
         "crm_accounts",
         "product_catalog",
@@ -38,9 +38,12 @@ def run_research_agent(state: GTMState) -> Dict[str, Any]:
 
     retrieved_context: List[Dict[str, Any]] = []
     document_ids: List[str] = []
+    patterns_identified: List[str] = []
 
     for source in required_sources:
         hits = _search_source(source, lead_data)
+        if hits:
+            patterns_identified.append(f"Found {len(hits)} doc(s) in {source}")
         for hit in hits:
             retrieved_context.append(hit)
             doc_id = hit.get("document_id")
@@ -56,8 +59,17 @@ def run_research_agent(state: GTMState) -> Dict[str, Any]:
             doc_id = hit.get("document_id")
             if doc_id and doc_id not in document_ids:
                 document_ids.append(doc_id)
+        if fallback:
+            patterns_identified.append("Fallback broad knowledge search used")
+
+    reasoning = (
+        f"Retrieved {len(document_ids)} documents across {len(required_sources)} planned sources "
+        f"to enrich shared state for downstream agents."
+    )
 
     return {
         "retrieved_context": retrieved_context,
         "retrieved_documents": document_ids,
+        "patterns_identified": patterns_identified,
+        "reasoning": reasoning,
     }

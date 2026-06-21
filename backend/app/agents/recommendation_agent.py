@@ -2,34 +2,45 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from app.agents.base import call_json_agent, get_client
-from app.state import GTMState
-
-MEETING_THRESHOLD = 75
-VALID_ACTIONS = {"book_meeting", "send_email", "nurture", "reject", "human_review"}
+from app.agents.base import call_json_agent, get_client, reasoning_system_prompt
+from app.agents.guardrails import MEETING_THRESHOLD, apply_recommendation_guardrails
+from app.state import GTMState, get_lead, get_product_fit, get_qualification
 
 
 def _mock_recommendation(state: GTMState) -> Dict[str, Any]:
-    qualification = state.get("qualification") or {}
-    product_fit = state.get("product_fit") or {}
+    qualification = get_qualification(state)
+    product_fit = get_product_fit(state)
     score = qualification.get("score", 0)
-    fit_confidence = product_fit.get("confidence", 1.0)
-
-    if fit_confidence < 0.65 and qualification.get("qualified"):
-        return {"next_action": "human_review"}
+    patterns: List[str] = []
+    tradeoffs: List[str] = []
 
     if score >= MEETING_THRESHOLD:
-        next_action = "book_meeting"
+        action = "book_meeting"
+        patterns.append("High qualification score supports direct meeting")
     elif qualification.get("qualified"):
-        next_action = "send_email"
+        action = "send_email"
+        patterns.append("Qualified but needs warming")
+        tradeoffs.append("Meeting deferred — score below meeting threshold")
     elif score >= 30:
-        next_action = "nurture"
+        action = "nurture"
+        patterns.append("Low intent — nurture track")
     else:
-        next_action = "reject"
+        action = "reject"
+        patterns.append("Poor fit signals")
 
-    return {"next_action": next_action}
+    reasoning = (
+        f"Recommended '{action}' based on score {score} and "
+        f"product-fit confidence {product_fit.get('confidence', 0):.0%}."
+    )
+    raw = {
+        "next_action": action,
+        "patterns": patterns,
+        "tradeoffs": tradeoffs,
+        "reasoning": reasoning,
+    }
+    return apply_recommendation_guardrails(raw, qualification, product_fit)
 
 
 def run_recommendation_agent(state: GTMState) -> Dict[str, Any]:
@@ -37,9 +48,9 @@ def run_recommendation_agent(state: GTMState) -> Dict[str, Any]:
     if not client:
         return _mock_recommendation(state)
 
-    lead_data = state["lead"]
-    qualification = state.get("qualification") or {}
-    product_fit = state.get("product_fit") or {}
+    lead_data = get_lead(state)
+    qualification = get_qualification(state)
+    product_fit = get_product_fit(state)
 
     prompt = f"""Decide the next sales action for this lead.
 
@@ -48,22 +59,27 @@ Qualification: score={qualification.get('score')}, qualified={qualification.get(
 Reasoning: {qualification.get('reasoning', qualification.get('reason'))}
 Product fit: {product_fit.get('recommended_product')} (confidence {product_fit.get('confidence')})
 
-Choose ONE next_action:
-- book_meeting: Strong lead, schedule a meeting (score >= {MEETING_THRESHOLD})
-- send_email: Qualified but needs warming up
-- nurture: Low intent, add to nurture campaign
-- reject: Poor fit, do not pursue
-- human_review: Uncertain — escalate for manual review
+Identify patterns, weigh tradeoffs, then choose ONE next_action:
+- book_meeting, send_email, nurture, reject, human_review
 
-Return JSON with exactly one key: next_action (string).
+Guidance (guardrails may adjust): book_meeting typically requires score >= {MEETING_THRESHOLD}.
+
+Return JSON with:
+- next_action (string)
+- patterns (array — decision patterns you identified)
+- tradeoffs (array — alternatives you considered)
+- reasoning (string — explain WHY)
 """
 
     result = call_json_agent(
-        "You are a B2B sales strategist deciding the next action. Return structured JSON only.",
+        reasoning_system_prompt("B2B sales strategist deciding the next action"),
         prompt,
-        temperature=0.2,
+        temperature=0.3,
     )
-    action = result.get("next_action", result.get("action", "send_email"))
-    if action not in VALID_ACTIONS:
-        action = "send_email"
-    return {"next_action": action}
+    raw = {
+        "next_action": result.get("next_action", result.get("action", "send_email")),
+        "patterns": list(result.get("patterns") or []),
+        "tradeoffs": list(result.get("tradeoffs") or []),
+        "reasoning": str(result.get("reasoning") or ""),
+    }
+    return apply_recommendation_guardrails(raw, qualification, product_fit)

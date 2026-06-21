@@ -12,6 +12,7 @@ from app.repository import (
     count_leads,
     create_lead,
     get_lead,
+    get_lead_state,
     lead_to_response,
     list_leads,
     save_agent_runs,
@@ -19,6 +20,7 @@ from app.repository import (
 )
 from app.schemas import (
     EvaluationMetrics,
+    GTMStateSnapshot,
     HealthResponse,
     LeadCreate,
     LeadResponse,
@@ -50,7 +52,7 @@ def health(db: Session = Depends(get_db)):
     return HealthResponse(
         status="ok",
         version="4.0.0",
-        phase="4-target-architecture",
+        phase="7-qualification-agent",
         persisted=True,
         lead_count=count_leads(db),
     )
@@ -82,6 +84,14 @@ def get_lead_by_id(lead_id: int, db: Session = Depends(get_db)):
     return lead
 
 
+@app.get("/api/leads/{lead_id}/state", response_model=GTMStateSnapshot)
+def get_lead_state_by_id(lead_id: int, db: Session = Depends(get_db)):
+    snapshot = get_lead_state(db, lead_id)
+    if not snapshot:
+        raise HTTPException(status_code=404, detail="Shared state not found for lead")
+    return snapshot
+
+
 @app.post("/api/leads/submit", response_model=LeadResponse)
 def submit_lead(data: LeadCreate, db: Session = Depends(get_db)):
     lead_data = {
@@ -106,6 +116,7 @@ def submit_lead(data: LeadCreate, db: Session = Depends(get_db)):
             error=pipeline_result.error,
             step_id=pipeline_result.step_id,
             processing_time_ms=pipeline_result.processing_time_ms,
+            state_snapshot=pipeline_result.state_snapshot,
         )
         db.commit()
         db.refresh(lead)
@@ -117,6 +128,7 @@ def submit_lead(data: LeadCreate, db: Session = Depends(get_db)):
             pipeline_error=pipeline_result.error,
             pipeline_step_id=pipeline_result.step_id,
             processing_time_ms=pipeline_result.processing_time_ms,
+            state_snapshot=pipeline_result.state_snapshot,
         )
     except Exception as e:
         db.rollback()

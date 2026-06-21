@@ -16,6 +16,7 @@ def _migrate_leads_columns() -> None:
         ("pipeline_error", "TEXT"),
         ("pipeline_step_id", "VARCHAR(64)"),
         ("processing_time_ms", "INTEGER"),
+        ("state_snapshot", "JSON"),
     ]
 
     with engine.begin() as conn:

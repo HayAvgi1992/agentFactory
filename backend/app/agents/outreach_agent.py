@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from app.agents.base import call_json_agent, get_client
-from app.state import GTMState
+from app.agents.base import call_json_agent, get_client, reasoning_system_prompt
+from app.state import GTMState, get_lead, get_product_fit, get_qualification
 
 
 def _mock_outreach(state: GTMState) -> Dict[str, Any]:
-    lead_data = state["lead"]
-    product_fit = state.get("product_fit") or {}
+    lead_data = get_lead(state)
+    product_fit = get_product_fit(state)
+    qualification = get_qualification(state)
     company = lead_data.get("company_name", "your company")
     industry = lead_data.get("industry", "your industry")
     product = product_fit.get("recommended_product", "our platform")
+
+    patterns = [
+        f"Personalized for {industry} industry" if industry else "Generic industry outreach",
+        f"Anchored on {product} recommendation",
+    ]
+    reasoning = (
+        f"Outreach tailored to qualification score {qualification.get('score', 'N/A')} "
+        f"and product fit ({product})."
+    )
 
     return {
         "email": (
@@ -34,6 +44,8 @@ def _mock_outreach(state: GTMState) -> Dict[str, Any]:
             "What does success look like in the next 90 days?",
             "What's your current approach to this challenge?",
         ],
+        "patterns": patterns,
+        "reasoning": reasoning,
     }
 
 
@@ -42,9 +54,9 @@ def run_outreach_agent(state: GTMState) -> Dict[str, Any]:
     if not client:
         return _mock_outreach(state)
 
-    lead_data = state["lead"]
-    qualification = state.get("qualification") or {}
-    product_fit = state.get("product_fit") or {}
+    lead_data = get_lead(state)
+    qualification = get_qualification(state)
+    product_fit = get_product_fit(state)
 
     prompt = f"""Generate personalized outreach for this B2B lead.
 
@@ -55,16 +67,18 @@ Qualification score: {qualification.get('score')}/100
 Recommended product: {product_fit.get('recommended_product', 'unknown')}
 Product fit reasoning: {product_fit.get('reasoning', '')}
 
-Generate:
-1. email — full first-touch email with subject line
-2. linkedin — concise LinkedIn DM (under 300 chars)
-3. questions — array of 4 discovery questions
+Identify personalization patterns, then generate outreach.
 
-Return JSON with exactly these keys: email, linkedin, questions.
+Return JSON with:
+- email (string — full first-touch email with subject line)
+- linkedin (string — concise LinkedIn DM under 300 chars)
+- questions (array of 4 discovery questions)
+- patterns (array — personalization patterns applied)
+- reasoning (string — why this outreach approach)
 """
 
     result = call_json_agent(
-        "You are a B2B SDR writing personalized outreach. Return structured JSON only.",
+        reasoning_system_prompt("B2B SDR writing personalized outreach"),
         prompt,
         temperature=0.7,
     )
@@ -72,4 +86,6 @@ Return JSON with exactly these keys: email, linkedin, questions.
         "email": result.get("email", result.get("email_draft", "")),
         "linkedin": result.get("linkedin", result.get("linkedin_message", "")),
         "questions": result.get("questions", result.get("discovery_questions", [])),
+        "patterns": list(result.get("patterns") or []),
+        "reasoning": str(result.get("reasoning") or ""),
     }

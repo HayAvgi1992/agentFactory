@@ -128,8 +128,20 @@ def test_list_leads_newest_first():
     assert [l.company_name for l in leads] == ["Second", "First"]
 
 
-def test_partial_runs_return_no_results():
+def test_partial_runs_return_qualification_only():
     runs = [
+        AgentRun(
+            lead_id=1,
+            agent_name="planner",
+            input={},
+            output={"required_sources": ["crm_accounts"]},
+        ),
+        AgentRun(
+            lead_id=1,
+            agent_name="research",
+            input={},
+            output={"retrieved_documents": ["acme"], "retrieved_context": []},
+        ),
         AgentRun(
             lead_id=1,
             agent_name="qualification",
@@ -137,7 +149,12 @@ def test_partial_runs_return_no_results():
             output={"qualified": True, "score": 80, "reason": "ok"},
         ),
     ]
-    assert build_agent_results_from_runs(runs) is None
+    results = build_agent_results_from_runs(runs)
+    assert results is not None
+    assert results.qualification.score == 80
+    assert results.planner is not None
+    assert results.outreach is None
+    assert results.recommendation is None
 
 
 def test_legacy_three_agent_runs_still_load():

@@ -8,8 +8,8 @@ from typing import List, Literal, Optional
 
 from app.graph import build_graph
 from app.results_builder import build_agent_results_from_state
-from app.schemas import AgentResults, AgentRunRecord
-from app.state import GTMState, initial_state
+from app.schemas import AgentResults, AgentRunRecord, GTMStateSnapshot
+from app.state import GTMState, build_state_snapshot, initial_state
 
 PipelineStatus = Literal["complete", "partial"]
 
@@ -19,6 +19,7 @@ class PipelineResult:
     status: PipelineStatus
     runs: List[AgentRunRecord] = field(default_factory=list)
     results: Optional[AgentResults] = None
+    state_snapshot: Optional[GTMStateSnapshot] = None
     error: Optional[str] = None
     failed_step: Optional[int] = None
     step_id: Optional[str] = None
@@ -61,6 +62,7 @@ def run_pipeline(lead_data: dict) -> PipelineResult:
     final_state: GTMState = graph.invoke(initial_state(lead_data))
     elapsed_ms = int((time.time() - start) * 1000)
     runs = _runs_from_state(final_state)
+    snapshot = build_state_snapshot(final_state)
 
     pipeline_error = final_state.get("pipeline_error")
     if pipeline_error:
@@ -68,6 +70,7 @@ def run_pipeline(lead_data: dict) -> PipelineResult:
             status="partial",
             runs=runs,
             results=build_agent_results_from_state(final_state, elapsed_ms),
+            state_snapshot=snapshot,
             error=pipeline_error["message"],
             failed_step=pipeline_error["step_index"],
             step_id=pipeline_error["step_id"],
@@ -78,5 +81,6 @@ def run_pipeline(lead_data: dict) -> PipelineResult:
         status="complete",
         runs=runs,
         results=build_agent_results_from_state(final_state, elapsed_ms),
+        state_snapshot=snapshot,
         processing_time_ms=elapsed_ms,
     )

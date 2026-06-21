@@ -15,7 +15,12 @@ from app.agents.qualification_agent import run_qualification_agent
 from app.agents.recommendation_agent import run_recommendation_agent
 from app.agents.research_agent import run_research_agent
 from app.config import settings
-from app.state import AgentRunDict, GTMState
+from app.state import (
+    AgentRunDict,
+    GTMState,
+    agent_output_from_state,
+    snapshot_for_agent,
+)
 
 NodeFn = Callable[[GTMState], Dict[str, Any]]
 
@@ -30,7 +35,11 @@ def _research_impl(state: GTMState) -> Dict[str, Any]:
     result = run_research_agent(state)
     return {
         "retrieved_context": result["retrieved_context"],
-        "research": {"retrieved_documents": result["retrieved_documents"]},
+        "research": {
+            "retrieved_documents": result["retrieved_documents"],
+            "patterns_identified": result.get("patterns_identified", []),
+            "reasoning": result.get("reasoning", ""),
+        },
     }
 
 
@@ -75,33 +84,6 @@ _NODE_NAMES = {
 }
 
 
-def _snapshot_for_agent(state: GTMState, agent_name: str) -> Dict[str, Any]:
-    snapshot: Dict[str, Any] = {"lead": state.get("lead", {})}
-    if agent_name != "planner":
-        snapshot["planner"] = state.get("planner")
-    if agent_name not in ("planner", "research"):
-        snapshot["retrieved_context"] = state.get("retrieved_context", [])
-    if agent_name in ("product_fit", "outreach", "recommendation", "evaluation"):
-        snapshot["qualification"] = state.get("qualification")
-    if agent_name in ("outreach", "recommendation", "evaluation"):
-        snapshot["product_fit"] = state.get("product_fit")
-    if agent_name in ("recommendation", "evaluation"):
-        snapshot["outreach"] = state.get("outreach")
-    if agent_name == "evaluation":
-        snapshot["recommendation"] = state.get("recommendation")
-    return snapshot
-
-
-def _agent_output(state: GTMState, agent_name: str) -> Dict[str, Any]:
-    if agent_name == "research":
-        research = state.get("research") or {}
-        return {
-            "retrieved_documents": research.get("retrieved_documents", []),
-            "retrieved_context": state.get("retrieved_context") or [],
-        }
-    return dict(state.get(agent_name) or {})
-
-
 def _instrument_node(
     step_index: int,
     step_id: str,
@@ -115,7 +97,7 @@ def _instrument_node(
             return {}
 
         time.sleep(settings.step_delay_sec)
-        agent_input = _snapshot_for_agent(state, agent_name)
+        agent_input = snapshot_for_agent(state, agent_name)
 
         try:
             patch = inner(state)
@@ -123,7 +105,7 @@ def _instrument_node(
             run: AgentRunDict = {
                 "agent_name": agent_name,
                 "input": agent_input,
-                "output": _agent_output(merged, agent_name),
+                "output": agent_output_from_state(merged, agent_name),
             }
             return {**patch, "agent_runs": [run]}
         except Exception as exc:

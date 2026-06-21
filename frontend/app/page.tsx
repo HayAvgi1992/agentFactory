@@ -107,7 +107,7 @@ export default function HomePage() {
               <tbody>
                 {leads.map((lead) => {
                   const r = lead.results;
-                  const action = r
+                  const action = r?.recommendation
                     ? ACTION_LABELS[r.recommendation.next_action]
                     : null;
                   return (

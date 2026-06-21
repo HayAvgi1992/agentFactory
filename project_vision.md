@@ -1,479 +1,508 @@
-# GTM Agent Factory
+# GTM Agent Factory — Project Vision
 
-## Project Goal
-
-Build an AI-native GTM (Go-To-Market) platform inspired by monday.com's RevAI organization.
-
-The purpose of the project is NOT to build another chatbot.
-
-The purpose is to demonstrate the ability to:
-
-* Take a business problem
-* Design an AI-powered workflow
-* Build production-like agent systems
-* Measure business impact
-* Experiment and iterate
-
-This project should showcase skills relevant for AI Product Engineering, Agent Engineering and AI System Design.
+> Version 2.0
+> Target State: AI-Native GTM Agent Platform
+> Inspired by monday.com RevAI
 
 ---
 
-# Core Business Problem
+# 1. Vision
 
-Sales teams spend significant time:
+GTM Agent Factory is an AI-native Go-To-Market platform designed to simulate the type of systems built by modern AI Revenue teams.
+
+The goal is NOT to build another chatbot.
+
+The goal is to build an Agentic System that can:
+
+* Understand leads
+* Retrieve business context
+* Make qualification decisions
+* Recommend products
+* Generate outreach
+* Evaluate its own decisions
+* Run experiments
+* Optimize business KPIs
+
+The project should demonstrate practical AI Product Engineering capabilities including:
+
+* Agent Engineering
+* LangGraph
+* Tool Calling
+* RAG
+* Embeddings
+* Vector Search
+* Evaluation Frameworks
+* Prompt Experimentation
+* Business KPI Optimization
+
+---
+
+# 2. Business Problem
+
+Revenue teams spend significant time:
 
 * Researching leads
-* Qualifying leads
+* Understanding customer needs
+* Matching products
+* Writing outreach
 * Prioritizing opportunities
-* Writing outreach messages
-* Deciding which leads deserve a meeting
 
-The goal is to automate the first stages of the sales funnel using AI Agents.
+The objective is to automate the first stages of the GTM funnel using AI Agents.
 
----
-
-# Success Criteria
-
-The project should answer:
-
-"How can AI increase GTM productivity and conversion?"
-
-Business KPIs:
-
-* Qualification Rate
-* Meeting Recommendation Rate
-* Average Lead Score
-* Prompt Win Rate
-* Agent Execution Time
+The system should behave similarly to a RevOps or Sales Development team member.
 
 ---
 
-# High Level Architecture
+# 3. Current State
 
-Frontend (Next.js)
-|
-FastAPI Backend
-|
-Agent Orchestrator
-|
--
+Current implementation includes:
 
-| | | |
-Research Qualification Outreach Recommendation
-Agent Agent Agent Agent
-|
-OpenAI
+✅ Qualification Agent
 
----
+✅ Outreach Agent
 
-# Phase 1 - MVP
+✅ Recommendation Agent
 
-Goal:
-Build a complete workflow as quickly as possible.
+✅ SQLite Persistence
 
-Do NOT use:
+✅ Evaluation Dashboard
 
-* LangGraph
-* RAG
-* Vector DB
-* Embeddings
+✅ KPI Tracking
 
-Keep it simple.
+Current architecture:
 
----
-
-## Feature 1 - Lead Submission
-
-User enters:
-
-* Company Name
-* Industry
-* Company Size
-* Lead Message
-
-Example:
-
-Company: Acme
-
-Industry: SaaS
-
-Employees: 100
-
-Message:
-"We are looking for a project management solution."
-
----
-
-## Feature 2 - Qualification Agent
-
-Input:
-
+```text
 Lead
-
-Output:
-
-{
-"qualified": true,
-"score": 88,
-"reason": "Strong fit for collaboration tools"
-}
-
-Requirements:
-
-* Structured JSON output
-* Score between 0-100
-* Qualification decision
-
----
-
-## Feature 3 - Outreach Agent
-
-Generate:
-
-* First Email
-* LinkedIn Message
-* Discovery Questions
-
-Output:
-
-{
-"email": "...",
-"linkedin": "...",
-"questions": [...]
-}
-
----
-
-## Feature 4 - Recommendation Agent
-
-Output:
-
-{
-"next_action": "book_meeting"
-}
-
-Possible actions:
-
-* reject
-* nurture
-* send_email
-* book_meeting
-
----
-
-## MVP Dashboard
-
-Display:
-
-* Lead
-* Score
-* Qualification
-* Recommendation
-
----
-
-## Agent Pipeline Diagram
-
-Visual card showing the sequential workflow:
-
+↓
+Qualification Agent
+↓
+Outreach Agent
+↓
+Recommendation Agent
 ```
-Lead Input
-    ↓
-Qualification Agent  (qualified · score · reason)
-    ↓
-Outreach Agent       (email · linkedin · questions)
-    ↓
-Recommendation Agent (next_action)
+
+This serves as the foundation for the next phase.
+
+---
+
+# 4. Target Architecture
+
+Future architecture:
+
+```text
+Lead
+↓
+Planner Agent
+↓
+Research Agent
+↓
+Qualification Agent
+↓
+Product Fit Agent
+↓
+Outreach Agent
+↓
+Recommendation Agent
+↓
+Evaluation Agent
 ```
+
+All agents share a common state.
+
+The system should evolve from a simple pipeline into a true Agentic Workflow.
+
+---
+
+# 5. Shared State
+
+All agents operate on a shared LangGraph state.
+
+```python
+class GTMState(TypedDict):
+    lead: dict
+    retrieved_context: list
+    qualification: dict
+    product_fit: dict
+    outreach: dict
+    recommendation: dict
+    evaluation: dict
+```
+
+Every agent reads and updates state.
+
+---
+
+# 6. Agent Design Philosophy
+
+Agents should NOT behave like deterministic rule engines.
+
+Agents should:
+
+* Retrieve context
+* Analyze information
+* Identify patterns
+* Reason about tradeoffs
+* Explain decisions
+
+Rules define guardrails.
+
+LLMs perform reasoning.
+
+Evaluation measures outcomes.
+
+---
+
+# 7. Qualification Agent
 
 Purpose:
 
-* Help users understand the agent flow at a glance
-* Show live status: Pending → Running → Complete
-* Surface key outputs on the diagram after a lead is processed
+Determine whether a lead should enter the sales process.
 
----
+Inputs:
 
-# Phase 2 - Persistence
-
-Goal:
-Store everything.
-
-Database:
-
-SQLite initially.
-
-Future:
-
-PostgreSQL.
-
-Tables:
-
-## leads
-
-id
-company_name
-industry
-company_size
-message
-created_at
-
----
-
-## agent_runs
-
-id
-lead_id
-agent_name
-input
-output
-created_at
-
----
-
-Store every agent execution.
-
-This becomes the foundation for evaluation.
-
----
-
-# Phase 3 - Evaluation Layer
-
-Goal:
-Demonstrate AI Engineering maturity.
-
-Create metrics:
-
-Qualification Rate
-
-qualified leads / total leads
-
-Meeting Recommendation Rate
-
-meeting recommendations / total leads
-
-Average Lead Score
-
-average score across all leads
-
----
-
-Dashboard should show:
-
-* Total Leads
-* Qualified Leads
-* Average Score
-* Meeting Recommendation Rate
-
----
-
-# Phase 4 - Prompt A/B Testing
-
-Goal:
-Simulate real-world AI experimentation.
-
-Create:
-
-Prompt A
-
-Prompt B
-
-Run both prompts on the same lead.
-
-Store results.
-
-Example:
-
-Prompt A:
-
-Conservative Qualification
-
-Prompt B:
-
-Aggressive Qualification
-
-Compare:
-
-* Qualification Rate
-* Meeting Recommendation Rate
-* Average Lead Score
-
-Display winner.
-
-This is one of the most important features.
-
----
-
-# Phase 5 - LangGraph Migration
-
-Goal:
-Introduce Agent Frameworks.
-
-Current Flow:
-
-Lead
-↓
-Qualification
-↓
-Outreach
-↓
-Recommendation
-
-Replace with:
-
-LangGraph State Machine
-
-START
-↓
-Research
-↓
-Qualification
-↓
-Outreach
-↓
-Recommendation
-↓
-END
-
-Purpose:
-
-* State Management
-* Agent Orchestration
-* Future Extensibility
-
----
-
-# Phase 6 - Tool Calling
-
-Goal:
-Create real agent behavior.
-
-Research Agent may use tools.
-
-Examples:
-
-search_company()
-
-get_company_profile()
-
-lookup_industry()
-
-Agent decides:
-
-* Which tool to call
-* When to call it
-* How to use returned data
-
----
-
-# Phase 7 - RAG
-
-Only after previous phases are complete.
-
-Create knowledge base:
-
-* Product Documentation
-* Pricing Information
+* Lead Information
+* CRM Context
+* Qualification Playbook
+* Product Context
 * Case Studies
-* Use Cases
+
+Output:
+
+```json
+{
+  "qualified": true,
+  "score": 84,
+  "signals": [
+    "Strong ICP fit",
+    "Pricing engagement"
+  ],
+  "risks": [
+    "Budget unknown"
+  ],
+  "reasoning": "The lead closely matches our ideal customer profile."
+}
+```
+
+The agent should explain WHY a lead is qualified.
+
+---
+
+# 8. Product Fit Agent
+
+Purpose:
+
+Recommend the most appropriate product.
+
+Inputs:
+
+* Lead Information
+* Qualification Output
+* Product Documentation
+* Case Studies
+
+Output:
+
+```json
+{
+  "recommended_product": "Monday CRM",
+  "alternative_products": [
+    "Work Management"
+  ],
+  "confidence": 0.91,
+  "matching_requirements": [
+    "Pipeline visibility",
+    "Lead tracking"
+  ],
+  "reasoning": "The lead's requirements align strongly with CRM capabilities."
+}
+```
+
+---
+
+# 9. Knowledge Base
+
+The system should use internal business knowledge rather than internet crawling.
+
+Folder structure:
+
+```text
+knowledge/
+
+crm_accounts/
+
+product_catalog/
+
+pricing/
+
+sales_playbooks/
+
+case_studies/
+```
+
+The Knowledge Base simulates:
+
+* Salesforce
+* HubSpot
+* Product Documentation
+* Internal Sales Playbooks
+* Customer Success Stories
+
+---
+
+# 10. Local RAG
+
+Agents should retrieve information from the Knowledge Base.
 
 Pipeline:
 
-Documents
+```text
+Markdown Documents
 ↓
 Chunking
 ↓
 Embeddings
 ↓
-Vector Database
+ChromaDB
 ↓
-Retrieval
+Vector Search
 ↓
-Agent
+Retrieved Context
+↓
+Agent Reasoning
+```
+
+The retrieved context becomes part of the shared state.
+
+---
+
+# 11. Tool Calling
+
+Agents should be able to use tools.
+
+Examples:
+
+```python
+search_crm_account()
+
+search_product_catalog()
+
+search_case_studies()
+
+search_pricing()
+
+search_knowledge_base()
+```
+
+Tools retrieve information.
+
+Agents decide when and how to use them.
+
+---
+
+# 12. Planner Agent
 
 Purpose:
 
-Generate more accurate recommendations.
+Determine what information is required before making decisions.
+
+Example output:
+
+```json
+{
+  "required_sources": [
+    "crm_accounts",
+    "product_catalog",
+    "case_studies"
+  ]
+}
+```
+
+The Planner Agent is responsible for orchestrating information gathering.
 
 ---
 
-# Phase 8 - Production AI Features
+# 13. Research Agent
 
-Potential future additions:
+Purpose:
 
-* Human-in-the-loop approval
-* Multi-agent collaboration
-* MCP integrations
-* Email sending
-* Calendar booking
-* Salesforce integration
-* HubSpot integration
-* Agent monitoring
-* Agent observability
+Collect relevant business context.
 
----
+Responsibilities:
 
-# Recommended Tech Stack
+* Retrieve documents
+* Execute tool calls
+* Populate shared state
 
-Frontend
+Output:
 
-* Next.js
-* TypeScript
-* TailwindCSS
-* React Query
-
-Backend
-
-* Python
-* FastAPI
-* SQLAlchemy
-* Pydantic
-
-Database
-
-* SQLite (MVP)
-* PostgreSQL (Future)
-
-AI
-
-* OpenAI SDK
-* Structured Outputs
-
-Future AI Stack
-
-* LangGraph
-* ChromaDB
-* OpenAI Embeddings
-
-Deployment
-
-Frontend:
-Vercel
-
-Backend:
-Render or Railway
+```json
+{
+  "retrieved_documents": [
+    "fintech_case_study",
+    "monday_crm"
+  ]
+}
+```
 
 ---
 
-# What Matters Most
+# 14. Evaluation Agent
 
-The goal is NOT:
+Purpose:
 
-"Look, I used a Vector Database."
+Evaluate decision quality.
 
-The goal IS:
+Output:
 
-"Look, I built an AI system that solves a business problem, measures impact, and supports experimentation."
+```json
+{
+  "confidence": 0.88,
+  "needs_human_review": false,
+  "missing_information": [
+    "budget"
+  ]
+}
+```
 
-Focus order:
+The Evaluation Agent helps measure AI quality and reliability.
 
-1. Business Workflow
-2. Agent Outputs
-3. Evaluation
-4. A/B Testing
-5. LangGraph
-6. Tool Calling
-7. RAG
-8. Advanced AI Infrastructure
+---
 
-Always optimize for measurable business impact over technical complexity.
+# 15. Prompt Experimentation Platform
+
+A core project goal is experimentation.
+
+Every agent should support prompt versioning.
+
+Example:
+
+```text
+Qualification Agent
+
+Version A
+Version B
+```
+
+Both prompts run on the same lead.
+
+Results are stored and compared.
+
+---
+
+# 16. A/B Testing Metrics
+
+Track:
+
+* Qualification Rate
+* Meeting Recommendation Rate
+* Average Lead Score
+* Confidence Score
+* Latency
+* Token Usage
+
+Determine winning prompt versions.
+
+---
+
+# 17. Persistence
+
+Store:
+
+* Leads
+* Agent Runs
+* Retrieved Documents
+* Evaluation Results
+* Prompt Versions
+* Experiment Runs
+
+The database becomes the foundation for evaluation and experimentation.
+
+---
+
+# 18. Observability
+
+Track:
+
+* Agent Name
+* Prompt Version
+* Tools Used
+* Retrieved Documents
+* Confidence
+* Latency
+* Token Usage
+
+Provide visibility into agent behavior.
+
+---
+
+# 19. Human In The Loop
+
+Agents may escalate uncertain decisions.
+
+Possible recommendation:
+
+```json
+{
+  "next_action": "human_review"
+}
+```
+
+Human review should be available before production actions are executed.
+
+---
+
+# 20. Development Roadmap
+
+Phase 1
+
+✅ Basic Agent Pipeline
+
+Phase 2
+
+✅ Persistence Layer
+
+Phase 3
+
+✅ Evaluation Dashboard
+
+Phase 4
+
+🔜 Prompt Experimentation & A/B Testing
+
+Phase 5
+
+🔜 LangGraph Migration
+
+Phase 6
+
+🔜 Knowledge Base + Local RAG
+
+Phase 7
+
+🔜 Tool Calling + Research Agent
+
+Phase 8
+
+🔜 Observability + Human Review
+
+Phase 9
+
+🔜 Production Readiness
+
+---
+
+# 21. Final Goal
+
+Build a production-style AI GTM platform that demonstrates:
+
+* Agent Engineering
+* LangGraph Workflows
+* Tool Calling
+* RAG
+* Embeddings
+* Vector Databases
+* Evaluation
+* Experimentation
+* Business Impact
+
+The system should resemble the architecture and product-thinking behind modern AI Revenue organizations such as monday.com's RevAI.

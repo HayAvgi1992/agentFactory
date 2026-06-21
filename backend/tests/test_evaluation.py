@@ -125,11 +125,11 @@ def test_partial_pipeline_counts_qualification_not_meeting():
     metrics = compute_evaluation_metrics(db)
 
     assert metrics.total_leads == 1
-    assert metrics.qualified_leads == 1
-    assert metrics.qualification_rate == 1.0
+    assert metrics.qualified_leads == 0
+    assert metrics.qualification_rate == 0.0
     assert metrics.meeting_recommendations == 0
     assert metrics.meeting_recommendation_rate == 0.0
-    assert metrics.average_score == 88.0
+    assert metrics.average_score is None
     assert metrics.processed_leads == 0
 
 

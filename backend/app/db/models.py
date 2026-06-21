@@ -21,6 +21,7 @@ class Lead(Base):
     pipeline_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pipeline_step_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     processing_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    state_snapshot: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False),
         server_default=func.now(),

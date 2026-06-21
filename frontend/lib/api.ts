@@ -2,10 +2,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface PlannerOutput {
   required_sources: string[];
+  reasoning?: string;
+  patterns?: string[];
 }
 
 export interface ResearchOutput {
   retrieved_documents: string[];
+  reasoning?: string;
+  patterns_identified?: string[];
 }
 
 export interface RetrievedContextItem {
@@ -21,7 +25,10 @@ export interface QualificationOutput {
   reason: string;
   signals: string[];
   risks: string[];
+  patterns?: string[];
+  tradeoffs?: string[];
   reasoning?: string;
+  context_inputs?: string[];
 }
 
 export interface ProductFitOutput {
@@ -30,22 +37,30 @@ export interface ProductFitOutput {
   confidence: number;
   matching_requirements: string[];
   reasoning: string;
+  patterns?: string[];
+  tradeoffs?: string[];
 }
 
 export interface OutreachOutput {
   email: string;
   linkedin: string;
   questions: string[];
+  reasoning?: string;
+  patterns?: string[];
 }
 
 export interface RecommendationOutput {
   next_action: string;
+  reasoning?: string;
+  patterns?: string[];
+  tradeoffs?: string[];
 }
 
 export interface EvaluationAgentOutput {
   confidence: number;
   needs_human_review: boolean;
   missing_information: string[];
+  reasoning?: string;
 }
 
 export interface AgentResults {
@@ -53,11 +68,24 @@ export interface AgentResults {
   research?: ResearchOutput;
   qualification: QualificationOutput;
   product_fit?: ProductFitOutput;
-  outreach: OutreachOutput;
-  recommendation: RecommendationOutput;
+  outreach?: OutreachOutput;
+  recommendation?: RecommendationOutput;
   evaluation?: EvaluationAgentOutput;
   retrieved_context: RetrievedContextItem[];
   processing_time_ms: number;
+}
+
+export interface GTMStateSnapshot {
+  lead: Record<string, unknown>;
+  planner?: Record<string, unknown> | null;
+  research?: Record<string, unknown> | null;
+  retrieved_context: RetrievedContextItem[];
+  qualification?: Record<string, unknown> | null;
+  product_fit?: Record<string, unknown> | null;
+  outreach?: Record<string, unknown> | null;
+  recommendation?: Record<string, unknown> | null;
+  evaluation?: Record<string, unknown> | null;
+  populated_fields: string[];
 }
 
 export interface Lead {
@@ -72,6 +100,7 @@ export interface Lead {
   pipeline_step_id?: string | null;
   processing_time_ms?: number | null;
   results?: AgentResults;
+  state_snapshot?: GTMStateSnapshot | null;
 }
 
 export interface EvaluationMetrics {
@@ -133,6 +162,7 @@ export const api = {
   getLeadsSummary: () => fetchApi<LeadsSummary>("/api/leads/summary"),
   getLeads: () => fetchApi<Lead[]>("/api/leads"),
   getLead: (id: number) => fetchApi<Lead>(`/api/leads/${id}`),
+  getLeadState: (id: number) => fetchApi<GTMStateSnapshot>(`/api/leads/${id}/state`),
   submitLead: (data: Record<string, unknown>) =>
     fetchApi<Lead>("/api/leads/submit", { method: "POST", body: JSON.stringify(data) }),
 };
